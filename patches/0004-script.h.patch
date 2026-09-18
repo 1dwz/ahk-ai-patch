@@ -1,12 +1,13 @@
 diff --git a/source/script.h b/source/script.h
-index b34d5a3..763ecd8 100644
+index b34d5a39..acf7597b 100644
 --- a/source/script.h
 +++ b/source/script.h
-@@ -2282,8 +2282,11 @@ public:
+@@ -2282,8 +2282,12 @@ public:
  	bool mAutoExecSectionIsRunning;
  	bool mIsRestart; // The app is restarting rather than starting from scratch.
  	bool mErrorStdOut; // true if load-time syntax errors should be sent to stdout vs. a MsgBox.
 +	bool mNonInteractive; // true when dialogs/windows must never be used for diagnostics or startup errors.
++	bool mNonInteractiveErrorSeen; // true once a non-interactive diagnostic of FAIL/CRITICAL severity was emitted.
  	UINT mErrorStdOutCP;
  	void SetErrorStdOut(LPTSTR aParam);
 +	void SetNonInteractive(bool aEnable = true) { mNonInteractive = aEnable; }

@@ -1,5 +1,5 @@
 diff --git a/source/AutoHotkey.cpp b/source/AutoHotkey.cpp
-index 02936c3..ab551f9 100644
+index 02936c36..ab551f98 100644
 --- a/source/AutoHotkey.cpp
 +++ b/source/AutoHotkey.cpp
 @@ -30,7 +30,7 @@ GNU General Public License for more details.

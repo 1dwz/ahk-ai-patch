@@ -42,11 +42,43 @@ function New-Case([string]$name, [string]$body) {
     return $p
 }
 
-$ok   = New-Case 'ok'   "#NoTrayIcon`nFileAppend \`"NORMAL_OK\``n\`", \`"*\`"`nExitApp 0"
-$syn  = New-Case 'syn'  "x := ("
-$run  = New-Case 'run'  "#NoTrayIcon`nf()`nf() {`n    localVarNeverAssigned`n    FileAppend \`"unreachable\``n\`", \`"*\`"`n}"
-$thr  = New-Case 'thr'  "#NoTrayIcon`nthrow Error(\`"boom\`", \`"detail\`")"
-$warn = New-Case 'warn' "#Warn All, StdOut`n#NoTrayIcon`nf()`nf() {`n    neverAssignedProbe`n}"
+# Here-strings avoid a layer of PowerShell escaping; the AHK side only needs
+# its own backtick escapes.
+$ok = New-Case 'ok' @'
+#NoTrayIcon
+FileAppend "NORMAL_OK`n", "*"
+ExitApp 0
+'@
+
+$syn = New-Case 'syn' @'
+x := (
+'@
+
+$run = New-Case 'run' @'
+#NoTrayIcon
+f()
+f() {
+    localVarNeverAssigned
+    FileAppend "unreachable`n", "*"
+}
+'@
+
+$thr = New-Case 'thr' @'
+#NoTrayIcon
+throw Error("boom", "detail")
+'@
+
+$warn = New-Case 'warn' @'
+#Warn LocalSameAsGlobal, StdOut
+#NoTrayIcon
+global gWarnProbe := 1
+f()
+f() {
+    gWarnProbe := 2
+}
+ExitApp 0
+'@
+
 $miss = Join-Path $tmp 'definitely-not-here.ahk'
 
 # name -> @{ Script; ExpectNonZero; MustMatchStderr; MustMatchStdout }
