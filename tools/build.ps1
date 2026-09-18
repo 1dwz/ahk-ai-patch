@@ -14,7 +14,7 @@ Usage:
 param(
     [string]$RepoRoot      = (Split-Path -Parent $PSScriptRoot),
     [string]$UpstreamDir,
-    [ValidateSet('Release','Debug','Self-contained','Release(mbcs)','Debug(mbcs)')]
+    [ValidateSet('Release','Debug','Self-contained','Release(mbcs)','Debug(mbcs)','Self-contained(mbcs)')]
     [string]$Configuration = 'Release',
     [ValidateSet('x64','Win32')]
     [string]$Platform      = 'x64',
@@ -85,8 +85,24 @@ if ($errs.Count) { $errs | Select-Object -First 40 | ForEach-Object { Write-Outp
 if ($code -ne 0) { exit $code }
 
 # --- report the produced binaries ----------------------------------------
-$binDir = if ($Configuration -like 'Debug*') { Join-Path $UpstreamDir 'bin_debug' } else { Join-Path $UpstreamDir 'bin' }
-$exeName = if ($Platform -eq 'x64') { 'AutoHotkey64.exe' } else { 'AutoHotkey32.exe' }
+# Naming follows AutoHotkeyx.vcxproj:
+#   normal  -> bin[ _debug]\AutoHotkey{32,64}.exe
+#   SC      -> bin[ _debug]\<Unicode|ANSI> <32|64>-bit.bin
+$isSC = $Configuration -like 'Self-contained*'
+$binDir = if ($Configuration -like 'Debug*' -or $Configuration -like '*\(debug\)*') {
+    Join-Path $UpstreamDir 'bin_debug'
+} else {
+    Join-Path $UpstreamDir 'bin'
+}
+
+if ($isSC) {
+    $bits = if ($Platform -eq 'x64') { '64' } else { '32' }
+    $charSet = if ($Configuration -like '*(mbcs)*') { 'ANSI' } else { 'Unicode' }
+    $exeName = "$charSet $bits-bit.bin"
+} else {
+    $exeName = if ($Platform -eq 'x64') { 'AutoHotkey64.exe' } else { 'AutoHotkey32.exe' }
+}
+
 $built = Join-Path $binDir $exeName
 if (Test-Path $built) {
     Write-Output ''
