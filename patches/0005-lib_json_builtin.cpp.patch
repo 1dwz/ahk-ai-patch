@@ -1,9 +1,9 @@
 diff --git a/source/lib/json_builtin.cpp b/source/lib/json_builtin.cpp
 new file mode 100644
-index 00000000..82ce2190
+index 00000000..cd33a4e4
 --- /dev/null
 +++ b/source/lib/json_builtin.cpp
-@@ -0,0 +1,569 @@
+@@ -0,0 +1,578 @@
 +/*#########################################################################
 +# AHK-AI patch: built-in JSON support
 +#
@@ -379,18 +379,21 @@ index 00000000..82ce2190
 +
 +	void Write(ExprTokenType &aValue)
 +	{
-+		if (aValue.symbol == SYM_OBJECT && aValue.object)
++		// A value holding an object can arrive as SYM_OBJECT (a literal) or as
++		// SYM_VAR / SYM_DYNAMIC (a variable), so TokenToObject is required --
++		// testing symbol == SYM_OBJECT directly silently mishandles variables.
++		if (IObject *obj = TokenToObject(aValue))
 +		{
 +			// Serialize only the two container types with a JSON equivalent.
 +			// Anything else (a Class, a COM object, ...) becomes a string.
-+			if (aValue.object->IsOfType(Array::sPrototype))
++			if (obj->IsOfType(Array::sPrototype))
 +			{
-+				WriteArray(static_cast<Array *>(aValue.object));
++				WriteArray(static_cast<Array *>(obj));
 +				return;
 +			}
-+			if (aValue.object->IsOfType(Map::sPrototype))
++			if (obj->IsOfType(Map::sPrototype))
 +			{
-+				WriteMap(static_cast<Map *>(aValue.object));
++				WriteMap(static_cast<Map *>(obj));
 +				return;
 +			}
 +			WriteQuoted(TokenToString(aValue));
@@ -522,11 +525,15 @@ index 00000000..82ce2190
 +		// Map's item accessors are private, so enumerate through the same
 +		// public path the language itself uses: GetEnumerator +
 +		// CallEnumerator with two VarRef out-parameters (key, value).
-+		IObject *enumerator;
-+		if (GetEnumerator(enumerator, ExprTokenType(static_cast<IObject *>(m)), 2, false) == OK)
++		// The token must stay alive for the duration of the call, so it is a
++		// named local rather than a temporary.
++		ExprTokenType enumToken(static_cast<IObject *>(m));
++		IObject *enumerator = nullptr;
++		if (GetEnumerator(enumerator, enumToken, 2, false) == OK && enumerator)
 +		{
 +			auto vkey = new VarRef(), vval = new VarRef();
-+			ExprTokenType tparam[] = { vkey, vval }, *param[] = { tparam, tparam + 1 };
++			ExprTokenType tparam[] = { vkey, vval };
++			ExprTokenType *param[] = { &tparam[0], &tparam[1] };
 +			for (;;)
 +			{
 +				if (CallEnumerator(enumerator, param, 2, false) != CONDITION_TRUE)
@@ -546,8 +553,10 @@ index 00000000..82ce2190
 +				vval->ToTokenSkipAddRef(vt);
 +				Write(vt);
 +			}
-+			// The enumerator releases its own references when it is freed;
-+			// the VarRefs themselves are SimpleHeap-allocated.
++			// Same teardown the debugger uses for its own enumeration.
++			vkey->Release();
++			vval->Release();
++			enumerator->Release();
 +		}
 +
 +		--mLevel;

@@ -1,0 +1,29 @@
+Fix JsonStringify mishandling objects held in variables
+
+JsonStringify only recognised a container when the token's symbol was
+SYM_OBJECT. That is true for a literal, but a value read out of a variable
+arrives as SYM_VAR (or SYM_DYNAMIC), so the check silently fell through to
+the scalar path and every serialization of a variable-held Map or Array
+returned an empty string:
+
+    JsonStringify(JsonParse("{...}"))   ; worked
+    p := JsonParse("{...}")
+    JsonStringify(p)                    ; returned ""
+
+Resolve the object with TokenToObject(), which handles SYM_OBJECT, SYM_VAR
+and SYM_DYNAMIC alike -- the same call the runtime uses elsewhere.
+
+Also correct the Map enumeration teardown. The enumerator is AddRef'd by
+GetEnumerator and the two VarRefs own references of their own, so all three
+must be released. Leaking the enumerator reference corrupted subsequent
+enumerations in the same process, which is why a Map built long after another
+Map had been serialized would come back empty.
+
+Both defects were invisible to the earlier tests because they only ever
+stringified freshly built Maps inline. The suite now asserts serialization
+through a variable, a parsed multi-key map, an 8-key map, a nested value, and
+pretty-printing, and covers a parsed Map with more keys than the first
+iteration.
+
+Verified: JSON 36 assertions and HTTP 29 assertions pass, the /AI smoke cases
+still pass, and the full 7-patch series still applies to a pristine upstream.

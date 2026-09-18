@@ -84,9 +84,28 @@ nested := JsonParse('{"x":{"y":{"z":[1,{"w":"deep"}]}}}')
 ok(nested["x"]["y"]["z"][2]["w"] == "deep", "deep nesting")
 
 ; ---- round trip ----
+; Regression: JsonStringify must work on a Map that JsonParse produced, not
+; just on one built by Map(). An earlier revision leaked the enumerator's
+; reference and lost every key after the first, so this exact shape (a parsed
+; map with several keys) is asserted directly.
 rt := JsonParse('{"k":[1,"two",3.5,true,null],"m":{"a":1}}')
 ok(Type(rt["k"]) == "Array" && rt["k"][2] == "two", "round trip keeps structure")
 ok(JsonStringify(rt) != "", "round trip produces text")
+parsed3 := JsonParse('{"a":1,"b":2,"c":3}')
+ok(JsonStringify(parsed3) == "{" Chr(34) "a" Chr(34) ":1," Chr(34) "b" Chr(34) ":2," Chr(34) "c" Chr(34) ":3}"
+    , "stringify a parsed multi-key map via a variable", JsonStringify(parsed3))
+; A variable-held object arrives as SYM_VAR, not SYM_OBJECT, so stringifying
+; through a variable is a distinct code path from inline use.
+mv := Map("a", 1, "b", 2, "c", 3)
+ok(JsonStringify(mv) == JsonStringify(Map("a", 1, "b", 2, "c", 3)), "stringify a variable-held Map")
+av := [1, 2, 3]
+ok(JsonStringify(av) == "[1,2,3]", "stringify a variable-held Array")
+ok(InStr(JsonStringify(parsed3, 2), Chr(34) "c" Chr(34)), "pretty print a variable-held map")
+parsed8 := JsonParse('{"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8}')
+ok(InStr(JsonStringify(parsed8), Chr(34) "h" Chr(34) ":8") , "stringify a parsed 8-key map")
+ok(InStr(JsonStringify(JsonParse('{"a":{"b":{"c":[1,2,{"d":"x"}]}}}')), "x")
+    , "stringify deeply nested parsed value")
+ok(JsonStringify(JsonParse('{"x":1}'), 2) != "", "pretty print a parsed map")
 
 ; ---- stringify basics ----
 mapOut := JsonStringify(Map("a", 1))
