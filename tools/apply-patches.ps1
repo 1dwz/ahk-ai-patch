@@ -50,7 +50,14 @@ if ($Reset -or $dirty) {
         Write-Output "upstream has local modifications; resetting to pinned commit"
     }
     git -C $UpstreamDir checkout -- . 2>&1 | Out-Null
-    git -C $UpstreamDir clean -fd 2>&1 | Out-Null
+    # The export step marks new files with `git add -N` (intent-to-add), which
+    # puts them in the index. A plain checkout/clean leaves them behind, and a
+    # later `git apply` then fails with "already exists in working directory".
+    # Unstage everything first, then remove untracked files.
+    git -C $UpstreamDir reset -q 2>&1 | Out-Null
+    git -C $UpstreamDir checkout -- . 2>&1 | Out-Null
+    # -x as well: new sources added by the series are untracked and must go.
+    git -C $UpstreamDir clean -fdx 2>&1 | Out-Null
 }
 
 # --- apply the series -----------------------------------------------------

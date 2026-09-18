@@ -112,6 +112,23 @@ if (Test-Path $built) {
         New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
         Copy-Item $built (Join-Path $OutDir $exeName) -Force
         Write-Output ("Copied to: {0}" -f (Join-Path $OutDir $exeName))
+
+        # HttpRequest loads libcurl at run time, so ship the DLL and a CA
+        # bundle beside the interpreter to make the output self-contained.
+        $curlSrc = Join-Path $RepoRoot 'third_party\curl'
+        if (Test-Path $curlSrc) {
+            $curlDst = Join-Path $OutDir 'curl'
+            New-Item -ItemType Directory -Force -Path $curlDst | Out-Null
+            foreach ($f in 'libcurl-x64.dll', 'curl-ca-bundle.crt') {
+                $s = Join-Path $curlSrc $f
+                if (Test-Path $s) {
+                    Copy-Item $s $curlDst -Force
+                    Write-Output ("Staged  : {0}" -f (Join-Path $curlDst $f))
+                }
+            }
+        } else {
+            Write-Warning "third_party\curl is missing; HttpRequest will need libcurl-x64.dll on the DLL search path."
+        }
     }
 } else {
     Write-Warning "Build reported success but $built is missing."

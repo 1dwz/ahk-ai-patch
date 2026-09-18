@@ -22,7 +22,33 @@ tracks the delta, so:
 
 ## Features added by this patch set
 
-### 1. Non-interactive / AI-friendly diagnostics (`/AI`, `/NonInteractive`)
+### 1. Built-in HTTP and JSON
+
+Three new built-in functions, available with no `#Include` and no script
+library — see **[docs/BUILTIN_HTTP_JSON.md](docs/BUILTIN_HTTP_JSON.md)** for the
+full reference.
+
+```ahk
+resp := HttpRequest("https://example.com/api", {
+    Method: "POST",
+    Body: JsonStringify(Map("name", "test")),
+    ContentType: "application/json"
+})
+if (resp["Ok"])
+    data := JsonParse(resp["Body"])
+```
+
+`JsonParse` / `JsonStringify` are hand-written and dependency-free; integers
+that fit in Int64 keep full precision, and malformed input raises a
+`ValueError` rather than silently yielding `""`.
+
+`HttpRequest` drives libcurl, loaded dynamically at first use. `build.ps1`
+stages `third_party/curl/libcurl-x64.dll` plus a CA bundle into `dist/curl/`, so
+HTTPS works without any system-wide setup. Transport failures come back as
+`Status = 0` with an `Error` field; HTTP error statuses (`404`) are normal
+returns with `Ok = 0`.
+
+### 2. Non-interactive / AI-friendly diagnostics (`/AI`, `/NonInteractive`)
 
 Upstream AutoHotkey always reports load-time and runtime problems with a GUI
 dialog (`Script::ShowError` → `DialogBoxParam`, falling back to `MsgBox`), which
@@ -61,16 +87,24 @@ Normal interactive behaviour is unchanged unless the switch is passed.
 .
 ├── upstream/               git submodule -> AutoHotkey/AutoHotkey (pinned)
 ├── patches/                patch series, applied in filename order
-│   ├── 0001-AutoHotkey.cpp.patch
-│   ├── 0002-error.cpp.patch
-│   ├── 0003-script.cpp.patch
-│   └── 0004-script.h.patch
+│   ├── 0001-AutoHotkeyx.vcxproj.patch
+│   ├── 0002-AutoHotkey.cpp.patch
+│   ├── 0003-error.cpp.patch
+│   ├── 0004-lib_http_builtin.cpp.patch
+│   ├── 0005-lib_json_builtin.cpp.patch
+│   ├── 0006-script.cpp.patch
+│   └── 0007-script.h.patch
+├── third_party/curl/       libcurl-x64.dll + curl-ca-bundle.crt (staged into dist/)
 ├── tools/
+│   ├── AhkAi.psm1          run the interpreter with a timeout + real stderr
 │   ├── apply-patches.ps1   clone/update upstream + apply the series
 │   ├── build.ps1           configure + build with MSBuild
 │   ├── download.ps1        fetch a CI artifact (and optionally smoke-test it)
 │   ├── export-patches.ps1  re-export the series from a working tree
-│   └── test-noninteractive.ps1
+│   ├── install-patched.ps1 install this build as the system interpreter
+│   ├── test-noninteractive.ps1
+│   └── test-json-http.ps1
+├── docs/BUILTIN_HTTP_JSON.md
 ├── UPSTREAM_PIN            the upstream commit the series is based on
 └── .github/workflows/build.yml
 ```
@@ -115,11 +149,31 @@ git submodule update --init --recursive
 pwsh -NoProfile -File tools/apply-patches.ps1
 pwsh -NoProfile -File tools/build.ps1 -Configuration Release -Platform x64 -OutDir dist
 pwsh -NoProfile -File tools/test-noninteractive.ps1 -Exe dist/AutoHotkey64.exe
+pwsh -NoProfile -File tools/test-json-http.ps1 -Exe dist/AutoHotkey64.exe
 ```
 
 Requires VS 2022 Build Tools with the "Desktop development with C++" workload;
 `tools/build.ps1` locates it via `vswhere` and sources `vcvarsall.bat` itself.
-Output lands in `upstream/bin/AutoHotkey64.exe`.
+Output lands in `upstream/bin/AutoHotkey64.exe`, and `-OutDir` also stages
+`curl/` alongside it.
+
+`test-json-http.ps1` exercises the HTTP functions against `httpbin.org`, so it
+needs network access. CI has none, so the `verify` job runs it with `-SkipHttp`
+(the JSON half is fully offline); run it without that switch locally.
+
+### Installing this build as the default interpreter
+
+To make AI debugging work everywhere rather than only when a caller remembers
+to pass `/AI`:
+
+```powershell
+pwsh -NoProfile -File tools/install-patched.ps1            # install
+pwsh -NoProfile -File tools/install-patched.ps1 -Revert    # restore upstream
+```
+
+It backs the original binaries up to `backup-stock/` and **refuses to install a
+candidate that does not demonstrably honour `/AI`**, so a stale build can never
+be promoted by accident.
 
 > Note: `upstream/` must not have `core.autocrlf=true`. Upstream ships
 > `* text=auto` and the patch series matches context lines byte-for-byte, so a

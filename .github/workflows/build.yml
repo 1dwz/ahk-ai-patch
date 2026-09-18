@@ -132,3 +132,10 @@ jobs:
       - name: Run non-interactive smoke tests
         shell: pwsh
         run: pwsh -NoProfile -File tools/test-noninteractive.ps1 -Exe dist/AutoHotkey64.exe
+
+      # The JSON suite is fully offline, so it always runs. The HTTP suite
+      # needs a live network and would make CI flaky, so it is skipped here and
+      # is meant to be run locally (see README).
+      - name: Run JSON suite (offline)
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/test-json-http.ps1 -Exe dist/AutoHotkey64.exe -SkipHttp

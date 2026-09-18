@@ -1,0 +1,13 @@
+diff --git a/AutoHotkeyx.vcxproj b/AutoHotkeyx.vcxproj
+index 53045b17..d0d40478 100644
+--- a/AutoHotkeyx.vcxproj
++++ b/AutoHotkeyx.vcxproj
+@@ -241,6 +241,8 @@
+     <ClCompile Include="source\lib\input.cpp" />
+     <ClCompile Include="source\lib\InputBox.cpp" />
+     <ClCompile Include="source\lib\interop.cpp" />
++    <ClCompile Include="source\lib\http_builtin.cpp" />
++    <ClCompile Include="source\lib\json_builtin.cpp" />
+     <ClCompile Include="source\lib\math.cpp" />
+     <ClCompile Include="source\lib\pixel.cpp" />
+     <ClCompile Include="source\lib\process.cpp">

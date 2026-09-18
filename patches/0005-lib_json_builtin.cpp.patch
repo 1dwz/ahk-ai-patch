@@ -1,0 +1,575 @@
+diff --git a/source/lib/json_builtin.cpp b/source/lib/json_builtin.cpp
+new file mode 100644
+index 00000000..82ce2190
+--- /dev/null
++++ b/source/lib/json_builtin.cpp
+@@ -0,0 +1,569 @@
++/*#########################################################################
++# AHK-AI patch: built-in JSON support
++#
++# Adds two built-in functions to AutoHotkey v2:
++#
++#   JsonParse(text)                  -> Map / Array / String / Integer / Float
++#   JsonStringify(value [, indent])   -> String
++#
++# Type mapping (deliberate; documented for users in docs/BUILTIN_HTTP_JSON.md):
++#
++#   JSON         ->  AHK v2
++#   -----------      ------------------------------------------
++#   object           Map
++#   array            Array
++#   string           String
++#   number           Integer when it fits in Int64 (no precision loss),
++#                    Float otherwise
++#   true / false     Integer 1 / 0   (AHK v2 has no boolean type; 1/0 is what
++#                                     AHK's own true/false evaluate to)
++#   null             String ""       (AHK v2 has no `undefined`; "" is how AHK
++#                                     already represents "no value")
++#
++# A malformed document raises a ValueError rather than silently yielding "",
++# so failures are visible to the script and to /AI diagnostics.
++#
++# The parser is hand-written so the patch stays dependency-free and so number
++# precision and error reporting stay under our control.
++#########################################################################*/
++
++#include "stdafx.h"
++#include "script.h"
++#include "script_func_impl.h"
++
++// Nesting limit, so a hostile or corrupt document cannot exhaust the C stack.
++#define JSON_MAX_DEPTH 512
++
++// AHK values are ExprTokenType (SYM_INTEGER / SYM_FLOAT / SYM_STRING /
++// SYM_OBJECT), not heap objects, so the parse tree is built out of Var.
++class JsonParser
++{
++public:
++	JsonParser(LPCTSTR aText, ResultToken &aResultToken)
++		: mStart(aText), mPos(aText), mResultToken(aResultToken), mDepth(0), mOk(true) {}
++
++	bool Parse()
++	{
++		SkipWs();
++		if (!*mPos)
++		{
++			// Empty input is not valid JSON. Producing "" is friendlier than
++			// raising, and matches how AHK treats an absent value.
++			mResultToken.SetValue(_T(""));
++			return true;
++		}
++		Var result;
++		if (!ParseValue(&result))
++			return false;
++		SkipWs();
++		if (*mPos)
++			return Fail(_T("unexpected trailing characters"));
++		result.ToTokenSkipAddRef(mResultToken);
++		return true;
++	}
++
++private:
++	LPCTSTR mStart;
++	LPCTSTR mPos;
++	ResultToken &mResultToken;
++	int mDepth;
++	bool mOk;
++
++	bool Fail(LPCTSTR aMsg)
++	{
++		mOk = false;
++		TCHAR buf[256];
++		sntprintf(buf, _countof(buf), _T("JsonParse: %s (at offset %u)"), aMsg, (unsigned)(mPos - mStart));
++		// A malformed document is an error, not a silent "". Raising makes the
++		// failure visible to the script and to /AI diagnostics.
++		mResultToken.ValueError(buf);
++		return false;
++	}
++
++	void SkipWs()
++	{
++		while (*mPos == ' ' || *mPos == '\t' || *mPos == '\r' || *mPos == '\n')
++			++mPos;
++	}
++
++	bool ParseValue(Var *aOut)
++	{
++		if (!mOk)
++			return false;
++		SkipWs();
++		switch (*mPos)
++		{
++		case '{': return ParseObject(aOut);
++		case '[': return ParseArray(aOut);
++		case '"': {
++			LPTSTR s = ParseString();
++			if (!s) return false;
++			aOut->Assign(s);
++			return true;
++		}
++		case 't':
++			if (!_tcsncmp(mPos, _T("true"), 4)) { mPos += 4; aOut->Assign((__int64)1); return true; }
++			return Fail(_T("invalid token"));
++		case 'f':
++			if (!_tcsncmp(mPos, _T("false"), 5)) { mPos += 5; aOut->Assign((__int64)0); return true; }
++			return Fail(_T("invalid token"));
++		case 'n':
++			if (!_tcsncmp(mPos, _T("null"), 4)) { mPos += 4; aOut->Assign(_T("")); return true; }
++			return Fail(_T("invalid token"));
++		default:
++			return ParseNumber(aOut);
++		}
++	}
++
++	bool ParseObject(Var *aOut)
++	{
++		++mPos; // consume '{'
++		if (++mDepth > JSON_MAX_DEPTH)
++			return Fail(_T("nesting too deep"));
++		// JSON objects become Maps, matching AHK v2's own mapping type.
++		Map *obj = Map::Create();
++		if (!obj)
++			return Fail(_T("out of memory"));
++		SkipWs();
++		if (*mPos == '}') { --mDepth; ++mPos; aOut->Assign(obj); return true; }
++		for (;;)
++		{
++			SkipWs();
++			if (*mPos != '"')
++				return Fail(_T("expected a string key"));
++			LPTSTR key = ParseString();
++			if (!key)
++				return false;
++			SkipWs();
++			if (*mPos != ':')
++				return Fail(_T("expected ':' after key"));
++			++mPos;
++			ExprTokenType val;
++			{
++				Var v;
++				if (!ParseValue(&v))
++					return false;
++				v.ToTokenSkipAddRef(val);
++			}
++			if (!obj->SetItem(key, val))
++				return Fail(_T("could not store key"));			SkipWs();
++			if (*mPos == ',') { ++mPos; continue; }
++			if (*mPos == '}') { --mDepth; ++mPos; aOut->Assign(obj); return true; }
++			return Fail(_T("expected ',' or '}'"));
++		}
++	}
++
++	bool ParseArray(Var *aOut)
++	{
++		++mPos; // consume '['
++		if (++mDepth > JSON_MAX_DEPTH)
++			return Fail(_T("nesting too deep"));
++		Array *arr = Array::Create();
++		if (!arr)
++			return Fail(_T("out of memory"));
++		SkipWs();
++		if (*mPos == ']') { --mDepth; ++mPos; aOut->Assign(arr); return true; }
++		for (;;)
++		{
++			ExprTokenType item;
++			{
++				Var v;
++				if (!ParseValue(&v))
++					return false;
++				v.ToTokenSkipAddRef(item);
++			}
++			if (!arr->Append(item))
++				return Fail(_T("could not append item"));
++			SkipWs();
++			if (*mPos == ',') { ++mPos; continue; }
++			if (*mPos == ']') { --mDepth; ++mPos; aOut->Assign(arr); return true; }
++			return Fail(_T("expected ',' or ']'"));
++		}
++	}
++
++	// Parse a string literal, decoding the standard escapes incl. \uXXXX.
++	LPTSTR ParseString()
++	{
++		++mPos; // consume opening quote
++		size_t cap = 64, len = 0;
++		LPTSTR buf = (LPTSTR)SimpleHeap::Alloc(cap * sizeof(TCHAR));
++		if (!buf)
++			return Fail(_T("out of memory")), nullptr;
++		for (;;)
++		{
++			TCHAR c = *mPos;
++			if (!c)
++				return Fail(_T("unterminated string")), nullptr;
++			if (c == '"') { ++mPos; break; }
++			if (c == '\\')
++			{
++				++mPos;
++				switch (TCHAR e = *mPos)
++				{
++				case '"':  c = '"';  ++mPos; break;
++				case '\\': c = '\\'; ++mPos; break;
++				case '/':  c = '/';  ++mPos; break;
++				case 'b':  c = '\b'; ++mPos; break;
++				case 'f':  c = '\f'; ++mPos; break;
++				case 'n':  c = '\n'; ++mPos; break;
++				case 'r':  c = '\r'; ++mPos; break;
++				case 't':  c = '\t'; ++mPos; break;
++				case 'u': {
++					++mPos;
++					unsigned cp;
++					if (!ReadHex4(cp))
++						return nullptr;
++					// Combine a UTF-16 surrogate pair when one follows.
++					if (cp >= 0xD800 && cp <= 0xDBFF && mPos[0] == '\\' && mPos[1] == 'u')
++					{
++						mPos += 2;
++						unsigned lo;
++						if (!ReadHex4(lo))
++							return nullptr;
++						cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00);
++					}
++					if (len + 4 >= cap)
++					{
++						if (!GrowString(buf, cap, cap * 2, len))
++							return nullptr;
++						cap *= 2;
++					}
++					if (cp < 0x10000)
++						buf[len++] = (TCHAR)cp;
++					else
++					{
++						cp -= 0x10000;
++						buf[len++] = (TCHAR)(0xD800 | (cp >> 10));
++						buf[len++] = (TCHAR)(0xDC00 | (cp & 0x3FF));
++					}
++					continue;
++				}
++				default:
++					--mPos;
++					return Fail(_T("invalid escape sequence")), nullptr;
++				}
++			}
++			else
++				++mPos;
++			if (len + 2 >= cap)
++			{
++				if (!GrowString(buf, cap, cap * 2, len))
++					return nullptr;
++				cap *= 2;
++			}
++			buf[len++] = c;
++		}
++		buf[len] = '\0';
++		return buf;
++	}
++
++	// SimpleHeap has no Realloc, so growth copies into a fresh block.
++	bool GrowString(LPTSTR &aBuf, size_t aOldCap, size_t aNewCap, size_t aLen)
++	{
++		LPTSTR bigger = (LPTSTR)SimpleHeap::Alloc(aNewCap * sizeof(TCHAR));
++		if (!bigger)
++		{
++			Fail(_T("out of memory"));
++			return false;
++		}
++		for (size_t i = 0; i < aLen; ++i) bigger[i] = aBuf[i];
++		aBuf = bigger;
++		return true;
++	}
++
++	bool ReadHex4(unsigned &aOut)
++	{
++		unsigned v = 0;
++		for (int i = 0; i < 4; ++i)
++		{
++			TCHAR h = *mPos++;
++			v <<= 4;
++			if (h >= '0' && h <= '9') v |= (unsigned)(h - '0');
++			else if (h >= 'a' && h <= 'f') v |= (unsigned)(h - 'a' + 10);
++			else if (h >= 'A' && h <= 'F') v |= (unsigned)(h - 'A' + 10);
++			else
++			{
++				Fail(_T("invalid \\u escape"));
++				return false;
++			}
++		}
++		aOut = v;
++		return true;
++	}
++
++	// Numbers: keep Integer type when the value fits in Int64, so ids and
++	// timestamps survive a round trip without precision loss.
++	bool ParseNumber(Var *aOut)
++	{
++		LPCTSTR start = mPos;
++		if (*mPos == '-') ++mPos;
++		if (!isdigit((unsigned char)*mPos))
++			return Fail(_T("invalid number"));
++		// RFC 8259 forbids leading zeros ("01"), so reject them explicitly.
++		if (*mPos == '0' && isdigit((unsigned char)mPos[1]))
++			return Fail(_T("leading zeros are not allowed"));
++		while (isdigit((unsigned char)*mPos)) ++mPos;
++		bool isFloat = false;
++		if (*mPos == '.')
++		{
++			isFloat = true;
++			++mPos;
++			if (!isdigit((unsigned char)*mPos))
++				return Fail(_T("invalid number"));
++			while (isdigit((unsigned char)*mPos)) ++mPos;
++		}
++		if (*mPos == 'e' || *mPos == 'E')
++		{
++			isFloat = true;
++			++mPos;
++			if (*mPos == '+' || *mPos == '-') ++mPos;
++			if (!isdigit((unsigned char)*mPos))
++				return Fail(_T("invalid number"));
++			while (isdigit((unsigned char)*mPos)) ++mPos;
++		}
++
++		size_t n = (size_t)(mPos - start);
++		TCHAR tmp[64];
++		if (n >= _countof(tmp))
++			return Fail(_T("number literal too long"));
++		_tcsncpy(tmp, start, n);
++		tmp[n] = '\0';
++
++		if (!isFloat)
++		{
++			errno = 0;
++			LPTSTR endp = nullptr;
++			__int64 v = _tcstoi64(tmp, &endp, 10);
++			if (endp && !*endp && errno != ERANGE)
++			{
++				aOut->Assign(v);
++				return true;
++			}
++		}
++		aOut->Assign(_tcstod(tmp, nullptr));
++		return true;
++	}
++};
++
++////////////////////////////////////////////////////////////////////////////
++// JsonParse(text)
++//
++BIF_DECL(BIF_JsonParse)
++{
++	if (aParamCount < 1)
++	{
++		aResultToken.SetValue(_T(""));
++		return;
++	}
++	LPTSTR text = TokenToString(*aParam[0]);
++	JsonParser parser(text, aResultToken);
++	parser.Parse();
++}
++
++////////////////////////////////////////////////////////////////////////////
++// JsonStringify(value [, indent])
++//
++// Serializes Map / Array / String / Integer / Float back to JSON text.
++// `indent` > 0 pretty-prints, using that many spaces per level.
++//
++class JsonWriter
++{
++public:
++	JsonWriter(int aIndent) : mIndent(aIndent) {}
++
++	void Write(ExprTokenType &aValue)
++	{
++		if (aValue.symbol == SYM_OBJECT && aValue.object)
++		{
++			// Serialize only the two container types with a JSON equivalent.
++			// Anything else (a Class, a COM object, ...) becomes a string.
++			if (aValue.object->IsOfType(Array::sPrototype))
++			{
++				WriteArray(static_cast<Array *>(aValue.object));
++				return;
++			}
++			if (aValue.object->IsOfType(Map::sPrototype))
++			{
++				WriteMap(static_cast<Map *>(aValue.object));
++				return;
++			}
++			WriteQuoted(TokenToString(aValue));
++			return;
++		}
++		WriteScalar(aValue);
++	}
++
++	LPTSTR Result() { return mBuf ? mBuf : const_cast<LPTSTR>(_T("")); }
++
++private:
++	int mIndent;
++	int mLevel = 0;
++	LPTSTR mBuf = nullptr;
++	size_t mCap = 0, mLen = 0;
++
++	void Reserve(size_t aExtra)
++	{
++		if (mLen + aExtra + 1 <= mCap)
++			return;
++		size_t ncap = mCap ? mCap : 256;
++		while (ncap < mLen + aExtra + 1) ncap *= 2;
++		LPTSTR bigger = (LPTSTR)SimpleHeap::Alloc(ncap * sizeof(TCHAR));
++		if (!bigger)
++			return;
++		for (size_t i = 0; i < mLen; ++i) bigger[i] = mBuf[i];
++		mBuf = bigger;
++		mCap = ncap;
++	}
++
++	void Put(TCHAR c) { Reserve(1); mBuf[mLen++] = c; mBuf[mLen] = '\0'; }
++	void PutS(LPCTSTR s)
++	{
++		size_t n = _tcslen(s);
++		Reserve(n);
++		for (size_t i = 0; i < n; ++i) mBuf[mLen++] = s[i];
++		mBuf[mLen] = '\0';
++	}
++
++	void Newline()
++	{
++		if (mIndent <= 0) return;
++		Put('\n');
++		for (int i = 0; i < mLevel * mIndent; ++i) Put(' ');
++	}
++
++	void WriteScalar(ExprTokenType &aValue)
++	{
++		switch (aValue.symbol)
++		{
++		case SYM_INTEGER:
++			{
++				TCHAR b[32];
++				sntprintf(b, _countof(b), _T("%I64d"), (__int64)aValue.value_int64);
++				PutS(b);
++			}
++			return;
++		case SYM_FLOAT:
++			{
++				// %.17g round-trips an IEEE double exactly.
++				TCHAR b[64];
++				sntprintf(b, _countof(b), _T("%.17g"), aValue.value_double);
++				PutS(b);
++			}
++			return;
++		default:
++			WriteQuoted(TokenToString(aValue));
++			return;
++		}
++	}
++
++	void WriteQuoted(LPCTSTR s)
++	{
++		Put('"');
++		if (s)
++		{
++			for (; *s; ++s)
++			{
++				switch (TCHAR c = *s)
++				{
++				case '"':  PutS(_T("\\\"")); break;
++				case '\\': PutS(_T("\\\\")); break;
++				case '\b': PutS(_T("\\b")); break;
++				case '\f': PutS(_T("\\f")); break;
++				case '\n': PutS(_T("\\n")); break;
++				case '\r': PutS(_T("\\r")); break;
++				case '\t': PutS(_T("\\t")); break;
++				default:
++					if (c < 0x20)
++					{
++						TCHAR b[8];
++						sntprintf(b, _countof(b), _T("\\u%04x"), (unsigned)c);
++						PutS(b);
++					}
++					else
++						Put(c);
++				}
++			}
++		}
++		Put('"');
++	}
++
++	void WriteArray(Array *a)
++	{
++		Put('[');
++		++mLevel;
++		bool first = true;
++		for (UINT i = 0; i < (UINT)a->Length(); ++i)
++		{
++			ExprTokenType item;
++			if (!a->ItemToToken(i, item))
++				continue;
++			if (!first) Put(',');
++			first = false;
++			Newline();
++			Write(item);
++		}
++		--mLevel;
++		if (!first) Newline();
++		Put(']');
++	}
++
++	void WriteMap(Map *m)
++	{
++		Put('{');
++		++mLevel;
++		bool first = true;
++
++		// Map's item accessors are private, so enumerate through the same
++		// public path the language itself uses: GetEnumerator +
++		// CallEnumerator with two VarRef out-parameters (key, value).
++		IObject *enumerator;
++		if (GetEnumerator(enumerator, ExprTokenType(static_cast<IObject *>(m)), 2, false) == OK)
++		{
++			auto vkey = new VarRef(), vval = new VarRef();
++			ExprTokenType tparam[] = { vkey, vval }, *param[] = { tparam, tparam + 1 };
++			for (;;)
++			{
++				if (CallEnumerator(enumerator, param, 2, false) != CONDITION_TRUE)
++					break;
++				if (!first) Put(',');
++				first = false;
++				Newline();
++
++				ExprTokenType kt;
++				vkey->ToTokenSkipAddRef(kt);
++				WriteQuoted(TokenToString(kt));
++
++				Put(':');
++				if (mIndent > 0) Put(' ');
++
++				ExprTokenType vt;
++				vval->ToTokenSkipAddRef(vt);
++				Write(vt);
++			}
++			// The enumerator releases its own references when it is freed;
++			// the VarRefs themselves are SimpleHeap-allocated.
++		}
++
++		--mLevel;
++		if (!first) Newline();
++		Put('}');
++	}
++};
++
++BIF_DECL(BIF_JsonStringify)
++{
++	if (aParamCount < 1)
++	{
++		aResultToken.SetValue(_T(""));
++		return;
++	}
++	int indent = 0;
++	if (aParamCount >= 2)
++		indent = (int)TokenToInt64(*aParam[1]);
++	if (indent < 0) indent = 0;
++	if (indent > 16) indent = 16; // keep output sane
++
++	JsonWriter writer(indent);
++	writer.Write(*aParam[0]);
++	aResultToken.SetValue(writer.Result());
++}

@@ -1,5 +1,5 @@
 diff --git a/source/script.h b/source/script.h
-index b34d5a39..8b91f3ba 100644
+index b34d5a39..3020abf8 100644
 --- a/source/script.h
 +++ b/source/script.h
 @@ -2282,10 +2282,15 @@ public:
@@ -18,3 +18,13 @@ index b34d5a39..8b91f3ba 100644
  #ifndef AUTOHOTKEYSC
  	bool mValidateThenExit;
  	LPTSTR mCmdLineInclude;
+@@ -2612,6 +2617,9 @@ BIF_DECL(BIF_Ord);
+ BIF_DECL(BIF_Chr);
+ BIF_DECL(BIF_Format);
+ BIF_DECL(BIF_FormatTime);
++BIF_DECL(BIF_HttpRequest);      // ahk-ai patch: built-in HTTP (libcurl)
++BIF_DECL(BIF_JsonParse);        // ahk-ai patch: built-in JSON
++BIF_DECL(BIF_JsonStringify);    // ahk-ai patch: built-in JSON
+ BIF_DECL(BIF_NumGet);
+ BIF_DECL(BIF_NumPut);
+ BIF_DECL(BIF_StrGetPut);
