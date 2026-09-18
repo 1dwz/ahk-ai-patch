@@ -68,34 +68,77 @@ Normal interactive behaviour is unchanged unless the switch is passed.
 ├── tools/
 │   ├── apply-patches.ps1   clone/update upstream + apply the series
 │   ├── build.ps1           configure + build with MSBuild
+│   ├── download.ps1        fetch a CI artifact (and optionally smoke-test it)
 │   ├── export-patches.ps1  re-export the series from a working tree
 │   └── test-noninteractive.ps1
+├── UPSTREAM_PIN            the upstream commit the series is based on
 └── .github/workflows/build.yml
 ```
+
+## Non-interactive exit-code policy
+
+| Situation | Exit code |
+|---|---|
+| Normal completion (`ExitApp 0`) | `0` |
+| Unhandled runtime error in a thread | `1` (`EXIT_ERROR`) |
+| Failed to load the script (syntax error, missing file) | `2` (`CRITICAL_ERROR`) |
+| Deliberate `ExitApp n` | `n` |
+
+Warnings do not change the exit code.
+
+## Download the CI build
+
+The `verify` job runs the smoke test against the freshly built artifact, so a
+green run already proves the `/AI` contract on a clean runner.
+
+```powershell
+# latest successful run -> ./download, then smoke-test it
+pwsh -NoProfile -File tools/download.ps1 -Test
+
+# a specific run / artifact
+pwsh -NoProfile -File tools/download.ps1 `
+  -RunId 35368001961 -Artifact AutoHotkey32-Win32-Release
+
+# equivalent raw gh commands
+gh run list --workflow=build.yml --limit 5
+gh run download <run-id> -n AutoHotkey64-x64-Release -D ./download
+./download/AutoHotkey64.exe /AI tools/tests/ok.ahk
+```
+
+Available artifacts: `AutoHotkey64-x64-Release`, `AutoHotkey32-Win32-Release`,
+`AutoHotkey64-x64-Debug`, and (experimental) `AutoHotkeySC-x64`.
 
 ## Local build
 
 ```powershell
-# 1. submodule + patches
 git submodule update --init --recursive
 pwsh -NoProfile -File tools/apply-patches.ps1
-
-# 2. build (needs VS 2022 Build Tools / MSVC + Windows SDK)
-pwsh -NoProfile -File tools/build.ps1 -Configuration Release -Platform x64
-
-# 3. smoke test the non-interactive contract
-pwsh -NoProfile -File tools/test-noninteractive.ps1
+pwsh -NoProfile -File tools/build.ps1 -Configuration Release -Platform x64 -OutDir dist
+pwsh -NoProfile -File tools/test-noninteractive.ps1 -Exe dist/AutoHotkey64.exe
 ```
 
+Requires VS 2022 Build Tools with the "Desktop development with C++" workload;
+`tools/build.ps1` locates it via `vswhere` and sources `vcvarsall.bat` itself.
 Output lands in `upstream/bin/AutoHotkey64.exe`.
 
-## Download the CI build
+> Note: `upstream/` must not have `core.autocrlf=true`. Upstream ships
+> `* text=auto` and the patch series matches context lines byte-for-byte, so a
+> CRLF work tree makes `git apply` fail. `apply-patches.ps1` sets
+> `core.autocrlf=false` / `core.eol=lf` for you.
 
-```powershell
-gh run list --workflow=build.yml --limit 5
-gh run download <run-id> -n AutoHotkey64-x64-Release -D ./dist
-./dist/AutoHotkey64.exe /AI tools/tests/ok.ahk
-```
+## Known upstream breakage
+
+The **Self-contained** (`AutoHotkeySC.bin`) configuration does **not** compile
+at the pinned upstream commit `d8f819c`. Verified against a pristine checkout
+with zero patches applied: `source/script_module.cpp` is compiled
+unconditionally yet references members that `script.h` hides behind
+`#ifndef AUTOHOTKEYSC` (`sMaxSourceFiles`, `mCurrentModule`, `mFileIdx`,
+`InitModuleSearchPath`, …), and `script.cpp` assigns to `LPTSTR sSourceFile[1]`.
+22 errors, identical with and without this patch series.
+
+It is therefore kept in the CI matrix but marked `experimental`
+(`continue-on-error`), so a future upstream fix is picked up automatically
+while a failure never blocks the usable artifacts.
 
 ## Updating to a newer upstream
 
@@ -103,6 +146,18 @@ gh run download <run-id> -n AutoHotkey64-x64-Release -D ./dist
 git -C upstream fetch origin alpha
 git -C upstream checkout <new-tag-or-sha>
 git add upstream && git commit -m "bump upstream to <tag>"
-pwsh -NoProfile -File tools/apply-patches.ps1   # surfaces conflicts
-pwsh -NoProfile -File tools/export-patches.ps1  # if you resolved them
+pwsh -NoProfile -File tools/apply-patches.ps1 -CheckOnly  # surfaces conflicts
 ```
+
+If a patch no longer applies, rebase it against the new base and re-export:
+
+```powershell
+git -C upstream apply --reject patches/0002-error.cpp.patch   # resolve .rej
+git -C upstream diff -- source/error.cpp > patches/0002-error.cpp.patch
+# or, for every file at once:
+pwsh -NoProfile -File tools/export-patches.ps1
+```
+
+CI's `patch-check` job runs first and fails fast on a stale series, so an
+upstream bump can never silently produce a mis-patched binary.
+

@@ -20,3 +20,6 @@ out/
 *.swp
 Thumbs.db
 desktop.ini
+
+# Downloaded CI artifacts
+download/
