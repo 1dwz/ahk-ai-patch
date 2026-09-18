@@ -113,21 +113,22 @@ if (Test-Path $built) {
         Copy-Item $built (Join-Path $OutDir $exeName) -Force
         Write-Output ("Copied to: {0}" -f (Join-Path $OutDir $exeName))
 
-        # HttpRequest loads libcurl at run time, so ship the DLL and a CA
-        # bundle beside the interpreter to make the output self-contained.
-        $curlSrc = Join-Path $RepoRoot 'third_party\curl'
-        if (Test-Path $curlSrc) {
-            $curlDst = Join-Path $OutDir 'curl'
-            New-Item -ItemType Directory -Force -Path $curlDst | Out-Null
-            foreach ($f in 'libcurl-x64.dll', 'curl-ca-bundle.crt') {
-                $s = Join-Path $curlSrc $f
-                if (Test-Path $s) {
-                    Copy-Item $s $curlDst -Force
-                    Write-Output ("Staged  : {0}" -f (Join-Path $curlDst $f))
-                }
-            }
+        # libcurl is linked statically (see third_party/curl-static), so the
+        # output is a single self-contained exe. Clean up the runtime DLL and
+        # CA bundle that the earlier dynamic-loading build staged here, and
+        # fail loudly if this exe still imports libcurl's DLL.
+        $stale = Join-Path $OutDir 'curl'
+        if (Test-Path $stale) {
+            Remove-Item $stale -Recurse -Force -EA SilentlyContinue
+            Write-Output "Removed : $stale (no longer needed with static libcurl)"
+        }
+
+        $bytes = [System.IO.File]::ReadAllBytes((Join-Path $OutDir $exeName))
+        $ascii = [System.Text.Encoding]::ASCII.GetString($bytes)
+        if ($ascii -match 'libcurl[^"'']*\.dll') {
+            Write-Warning "$exeName still references $($Matches[0]); the static link did not take."
         } else {
-            Write-Warning "third_party\curl is missing; HttpRequest will need libcurl-x64.dll on the DLL search path."
+            Write-Output 'Static  : no libcurl DLL import (linked in)'
         }
     }
 } else {

@@ -134,7 +134,11 @@ This is the part worth reading twice.
   `Ok = 0`, and there is **no** `Error`. A 404 is a successful exchange.
 * **Malformed arguments** (empty URL): raises, because it is a programming
   error rather than a network condition.
-* **libcurl missing**: raises, with a message saying where to put the DLL.
+* **Invalid arguments** (empty URL): raises, because it is a programming
+  error rather than a network condition.
+* **libcurl could not initialise** (e.g. the Winsock stack is unavailable):
+  raises. This is the only failure that is neither a transport result nor a
+  bad argument — it cannot happen on a working Windows install.
 
 ```ahk
 resp := HttpRequest("https://example.com/api", {
@@ -151,23 +155,34 @@ else
     data := JsonParse(resp["Body"])
 ```
 
-### libcurl discovery and TLS
+### TLS
 
-libcurl is loaded dynamically at first use (the interpreter does not link it at
-build time). It is looked up, in order:
+libcurl is **linked statically** into `AutoHotkey64.exe` / `AutoHotkey32.exe`,
+so there is nothing extra to ship: no `libcurl-x64.dll`, no
+`curl-ca-bundle.crt`, no `#Include`.
 
-1. `curl\libcurl-x64.dll` next to `AutoHotkey64.exe`
-2. `libcurl-x64.dll` next to `AutoHotkey64.exe`
-3. the standard DLL search path
+TLS uses the **Schannel** backend, so certificates are validated against the
+**Windows certificate store**. That is why no CA bundle is needed, and it also
+means a corporate root CA installed system-wide is honoured automatically.
 
-`tools/build.ps1 -OutDir dist` stages `third_party/curl/libcurl-x64.dll` and
-`curl-ca-bundle.crt` into `dist/curl/`, so a built tree is self-contained. If
-`curl\curl-ca-bundle.crt` sits next to the interpreter it is used as the CA
-bundle, which makes HTTPS work on machines with no system-wide CA setup.
+`Insecure: true` disables peer and host verification; it exists for testing
+against self-signed endpoints and should not be used in shipped scripts. (To
+trust one specific self-signed certificate properly, install it into the
+Windows trust store instead.)
+
+The interpreted build therefore imports only Windows DLLs — `ws2_32.dll`,
+`iphlpapi.dll`, `secur32.dll`, `crypt32.dll`, `bcrypt.dll` — plus what
+AutoHotkey already used.
+
+The static import libraries live in `third_party/curl-static/`. To rebuild them
+from curl source:
+
+```powershell
+pwsh -NoProfile -File tools/build-libcurl-static.ps1 -Platform both
+```
 
 Requests are blocking, so a long call stalls the script. Use a small `Timeout`
-when that matters. HTTPS verification is on by default; only pass
-`Insecure: true` in tests.
+when that matters.
 
 Bodies are decoded as UTF-8. Response bodies of other encodings come back as
 replacement characters — decode them yourself via `SaveTo` and

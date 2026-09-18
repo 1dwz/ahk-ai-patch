@@ -1,9 +1,9 @@
 diff --git a/source/lib/http_builtin.cpp b/source/lib/http_builtin.cpp
 new file mode 100644
-index 00000000..d72f3746
+index 00000000..469b883e
 --- /dev/null
 +++ b/source/lib/http_builtin.cpp
-@@ -0,0 +1,642 @@
+@@ -0,0 +1,628 @@
 +/*#########################################################################
 +# AHK-AI patch: built-in HTTP support (libcurl)
 +#
@@ -38,10 +38,10 @@ index 00000000..d72f3746
 +#   ElapsedMs     total time in milliseconds
 +#   Error         present only when the request failed at the transport level
 +#
-+# libcurl is loaded dynamically, so the patch needs no extra import library at
-+# build time. At run time the interpreter looks for libcurl-x64.dll next to
-+# itself, then in a "curl" subfolder, then on the DLL search path, raising a
-+# clear error if it is absent.
++# libcurl is linked statically (Schannel backend, HTTP/HTTPS only), so a
++# single AutoHotkey64.exe is self-contained and needs no external DLL.
++# third_party/curl-static/ holds the import-able static library; see
++# tools/build-libcurl-static.ps1 for how it is produced.
 +#########################################################################*/
 +
 +#include "stdafx.h"
@@ -50,77 +50,76 @@ index 00000000..d72f3746
 +#include "globaldata.h"
 +#include "StringConv.h"
 +
-+struct curl_slist;
++// libcurl's own headers. CURLOPT_* / CURLINFO_* come from here so the option
++// numbers can never drift from the library they are passed to.
++#define CURL_STATICLIB
++#include <curl/curl.h>
 +
 +// --- libcurl entry points we need -----------------------------------------
-+typedef void CURL;
-+typedef CURL *(__cdecl *PFN_curl_easy_init)();
-+typedef int   (__cdecl *PFN_curl_easy_setopt)(CURL *, int, ...);
-+typedef int   (__cdecl *PFN_curl_easy_perform)(CURL *);
-+typedef int   (__cdecl *PFN_curl_easy_getinfo)(CURL *, int, ...);
-+typedef void  (__cdecl *PFN_curl_easy_cleanup)(CURL *);
-+typedef curl_slist *(__cdecl *PFN_curl_slist_append)(curl_slist *, const char *);
-+typedef void  (__cdecl *PFN_curl_slist_free_all)(curl_slist *);
-+typedef const char *(__cdecl *PFN_curl_easy_strerror)(int);
++// With a static link these are plain declarations resolved by the linker; the
++// function pointers below simply point at them, which keeps the ~60 call sites
++// in this file written as `g_curl.xxx(...)` and so unchanged.
 +
-+// --- curl_easy_setopt option codes (stable ABI) ---------------------------
-+enum
-+{
-+	CURLOPT_WRITEDATA_       = 10001,
-+	CURLOPT_URL_             = 10002,
-+	CURLOPT_PROXY_           = 10004,
-+	CURLOPT_WRITEFUNCTION_   = 20011,
-+	CURLOPT_HTTPHEADER_      = 10023,
-+	CURLOPT_HEADERFUNCTION_  = 20079,
-+	CURLOPT_HEADERDATA_      = 10029,
-+	CURLOPT_TIMEOUT_         = 13,
-+	CURLOPT_CONNECTTIMEOUT_  = 78,
-+	CURLOPT_FOLLOWLOCATION_  = 52,
-+	CURLOPT_MAXREDIRS_       = 68,
-+	CURLOPT_USERAGENT_       = 10018,
-+	CURLOPT_POSTFIELDS_      = 10015,
-+	CURLOPT_POSTFIELDSIZE_   = 60,
-+	CURLOPT_CUSTOMREQUEST_   = 10036,
-+	CURLOPT_SSL_VERIFYPEER_  = 64,
-+	CURLOPT_SSL_VERIFYHOST_  = 81,
-+	CURLOPT_CAINFO_          = 10065,
-+	CURLOPT_NOSIGNAL_        = 99,
-+	CURLOPT_ACCEPT_ENCODING_ = 10102,
-+	CURLOPT_POST_            = 47,
-+	CURLOPT_NOBODY_          = 44,
-+	CURLOPT_HTTPGET_         = 80,
-+};
++// --- curl_easy_setopt option codes ---------------------------------------
++// These now come from libcurl's own headers, which removes a whole class of
++// silent breakage: a wrong option number is accepted by curl_easy_setopt and
++// only misbehaves later, so hand-written constants are not worth the risk.
++// The trailing-underscore aliases are kept so the long list of existing call
++// sites stays readable and unchanged.
++#define CURLOPT_WRITEDATA_       CURLOPT_WRITEDATA
++#define CURLOPT_URL_             CURLOPT_URL
++#define CURLOPT_PROXY_           CURLOPT_PROXY
++#define CURLOPT_WRITEFUNCTION_   CURLOPT_WRITEFUNCTION
++#define CURLOPT_HTTPHEADER_      CURLOPT_HTTPHEADER
++#define CURLOPT_HEADERFUNCTION_  CURLOPT_HEADERFUNCTION
++#define CURLOPT_HEADERDATA_      CURLOPT_HEADERDATA
++#define CURLOPT_TIMEOUT_         CURLOPT_TIMEOUT
++#define CURLOPT_CONNECTTIMEOUT_  CURLOPT_CONNECTTIMEOUT
++#define CURLOPT_FOLLOWLOCATION_  CURLOPT_FOLLOWLOCATION
++#define CURLOPT_MAXREDIRS_       CURLOPT_MAXREDIRS
++#define CURLOPT_USERAGENT_       CURLOPT_USERAGENT
++#define CURLOPT_POSTFIELDS_      CURLOPT_POSTFIELDS
++#define CURLOPT_POSTFIELDSIZE_   CURLOPT_POSTFIELDSIZE
++#define CURLOPT_CUSTOMREQUEST_   CURLOPT_CUSTOMREQUEST
++#define CURLOPT_SSL_VERIFYPEER_  CURLOPT_SSL_VERIFYPEER
++#define CURLOPT_SSL_VERIFYHOST_  CURLOPT_SSL_VERIFYHOST
++#define CURLOPT_CAINFO_          CURLOPT_CAINFO
++#define CURLOPT_NOSIGNAL_        CURLOPT_NOSIGNAL
++#define CURLOPT_ACCEPT_ENCODING_ CURLOPT_ACCEPT_ENCODING
++#define CURLOPT_POST_            CURLOPT_POST
++#define CURLOPT_NOBODY_          CURLOPT_NOBODY
++#define CURLOPT_HTTPGET_         CURLOPT_HTTPGET
 +
-+enum
-+{
-+	CURLINFO_RESPONSE_CODE_ = 0x200002,
-+	CURLINFO_EFFECTIVE_URL_ = 0x100001,
-+	CURLINFO_TOTAL_TIME_    = 0x300003,
-+};
++#define CURLINFO_RESPONSE_CODE_  CURLINFO_RESPONSE_CODE
++#define CURLINFO_EFFECTIVE_URL_  CURLINFO_EFFECTIVE_URL
++#define CURLINFO_TOTAL_TIME_     CURLINFO_TOTAL_TIME
 +
-+#define CURLE_OK_ 0
++#define CURLE_OK_ CURLE_OK
 +
-+// --- lazily-loaded libcurl ------------------------------------------------
++// --- statically linked libcurl -------------------------------------------
++// The static library is linked in, so the pointers below are simply filled
++// with the real addresses. Keeping them behind a struct means the ~60 call
++// sites did not have to change when this moved off LoadLibrary/GetProcAddress.
 +struct CurlApi
 +{
-+	bool tried = false;
 +	bool ok = false;
-+	HMODULE module = nullptr;
-+	PFN_curl_easy_init      easy_init = nullptr;
-+	PFN_curl_easy_setopt    easy_setopt = nullptr;
-+	PFN_curl_easy_perform   easy_perform = nullptr;
-+	PFN_curl_easy_getinfo   easy_getinfo = nullptr;
-+	PFN_curl_easy_cleanup   easy_cleanup = nullptr;
-+	PFN_curl_slist_append   slist_append = nullptr;
-+	PFN_curl_slist_free_all slist_free_all = nullptr;
-+	PFN_curl_easy_strerror  easy_strerror = nullptr;
-+	// Set to the CA bundle path chosen at load time (empty = libcurl default).
++	// These signatures come from libcurl's headers rather than being spelled
++	// out by hand, so the compiler checks them against the real functions.
++	CURL *(*easy_init)()                                      = nullptr;
++	CURLcode (*easy_setopt)(CURL *, CURLoption, ...)          = nullptr;
++	CURLcode (*easy_perform)(CURL *)                          = nullptr;
++	CURLcode (*easy_getinfo)(CURL *, CURLINFO, ...)           = nullptr;
++	void (*easy_cleanup)(CURL *)                              = nullptr;
++	curl_slist *(*slist_append)(curl_slist *, const char *)   = nullptr;
++	void (*slist_free_all)(curl_slist *)                      = nullptr;
++	const char *(*easy_strerror)(CURLcode)                    = nullptr;
++	// Path of the CA bundle used when libcurl's own default is not enough.
++	// With Schannel this is normally empty: Windows verifies against its own
++	// trust store, so no bundle needs to ship at all.
 +	char ca_path[MAX_PATH] = "";
 +};
 +
 +static CurlApi g_curl;
-+static CRITICAL_SECTION g_curlCs;
-+static bool g_curlCsInit = false;
 +
 +// Directory containing the running interpreter, with a trailing backslash.
 +static void GetExeDir(TCHAR *aBuf, size_t aBufCount)
@@ -136,83 +135,46 @@ index 00000000..d72f3746
 +	// sntprintf takes an int size, and MAX_PATH always fits.
 +	sntprintf(aBuf, (int)aBufCount, _T("%s"), dir);
 +}
-+static HMODULE LoadCurlModule()
-+{
-+	TCHAR dir[MAX_PATH];
-+	GetExeDir(dir, _countof(dir));
-+	if (dir[0])
-+	{
-+		TCHAR candidate[MAX_PATH];
-+		sntprintf(candidate, _countof(candidate), _T("%scurl\\libcurl-x64.dll"), dir);
-+		if (HMODULE m = LoadLibrary(candidate))
-+			return m;
-+		sntprintf(candidate, _countof(candidate), _T("%slibcurl-x64.dll"), dir);
-+		if (HMODULE m = LoadLibrary(candidate))
-+			return m;
-+	}
-+	return LoadLibrary(_T("libcurl-x64.dll"));
-+}
 +
-+// Resolve the DLL and pick a CA bundle. Safe to call from multiple threads.
++// Fill in the table once. Thread-safe via a function-local static, which the
++// C++ runtime guarantees is initialised exactly once even under contention.
 +static bool EnsureCurl()
 +{
-+	if (g_curl.tried)
-+		return g_curl.ok;
++	static bool initialised = []() -> bool {
++		CURLcode globalInit = curl_global_init(CURL_GLOBAL_DEFAULT);
++		if (globalInit != CURLE_OK)
++			return false;
 +
-+	if (!g_curlCsInit)
-+	{
-+		InitializeCriticalSection(&g_curlCs);
-+		g_curlCsInit = true;
-+	}
-+	EnterCriticalSection(&g_curlCs);
++		g_curl.easy_init      = &curl_easy_init;
++		g_curl.easy_setopt    = &curl_easy_setopt;
++		g_curl.easy_perform   = &curl_easy_perform;
++		g_curl.easy_getinfo   = &curl_easy_getinfo;
++		g_curl.easy_cleanup   = &curl_easy_cleanup;
++		g_curl.slist_append   = &curl_slist_append;
++		g_curl.slist_free_all = &curl_slist_free_all;
++		g_curl.easy_strerror  = &curl_easy_strerror;
 +
-+	bool result = false;
-+	if (g_curl.tried)
-+	{
-+		result = g_curl.ok;
-+	}
-+	else
-+	{
-+		g_curl.tried = true;
-+		g_curl.module = LoadCurlModule();
-+		if (g_curl.module)
++		// Schannel uses the Windows trust store. Only honour an explicit bundle
++		// if one was placed next to the interpreter, which lets a user pin a
++		// private CA without rebuilding.
++		TCHAR dir[MAX_PATH];
++		GetExeDir(dir, _countof(dir));
++		if (dir[0])
 +		{
-+#define LOAD(name, field) \
-+			g_curl.field = (PFN_##name)GetProcAddress(g_curl.module, #name); \
-+			if (!g_curl.field) { FreeLibrary(g_curl.module); g_curl.module = nullptr; goto done; }
-+
-+			LOAD(curl_easy_init,      easy_init)
-+			LOAD(curl_easy_setopt,    easy_setopt)
-+			LOAD(curl_easy_perform,   easy_perform)
-+			LOAD(curl_easy_getinfo,   easy_getinfo)
-+			LOAD(curl_easy_cleanup,   easy_cleanup)
-+			LOAD(curl_slist_append,   slist_append)
-+			LOAD(curl_slist_free_all, slist_free_all)
-+			LOAD(curl_easy_strerror,  easy_strerror)
-+#undef LOAD
-+
-+			// Prefer a CA bundle shipped alongside the interpreter, so HTTPS
-+			// works on machines with no system-wide CA configuration.
-+			TCHAR dir[MAX_PATH];
-+			GetExeDir(dir, _countof(dir));
-+			if (dir[0])
++			TCHAR ca[MAX_PATH];
++			sntprintf(ca, _countof(ca), _T("%scurl\\curl-ca-bundle.crt"), dir);
++			if (GetFileAttributes(ca) != INVALID_FILE_ATTRIBUTES)
 +			{
-+				TCHAR ca[MAX_PATH];
-+				sntprintf(ca, _countof(ca), _T("%scurl\\curl-ca-bundle.crt"), dir);
-+				if (GetFileAttributes(ca) != INVALID_FILE_ATTRIBUTES)
-+				{
-+					// libcurl is ANSI here, so the path must be UTF-8.
-+					CStringUTF8FromWChar utf8(ca);
-+					sprintf(g_curl.ca_path, "%s", (LPCSTR)utf8);
-+				}
++				CStringUTF8FromWChar utf8(ca);
++				sprintf(g_curl.ca_path, "%s", (LPCSTR)utf8);
 +			}
-+			g_curl.ok = true;
-+			result = true;
 +		}
-+	}
-+done:
-+	LeaveCriticalSection(&g_curlCs);
-+	return result;
++
++		g_curl.ok = true;
++		return true;
++	}();
++
++	return initialised;
 +}
 +
 +// --- response accumulation ------------------------------------------------
@@ -390,9 +352,11 @@ index 00000000..d72f3746
 +
 +	if (!EnsureCurl())
 +	{
++		// With a static link the only realistic cause is curl_global_init
++		// failing, typically because Windows could not set up winsock.
 +		aResultToken.Error(_T("HttpRequest")
-+			, _T("libcurl-x64.dll was not found. Place it next to AutoHotkey64.exe")
-+			  _T(" (for example in a 'curl' subfolder) or on the DLL search path."));
++			, _T("libcurl failed to initialise (curl_global_init). This usually")
++			  _T(" means the winsock stack is unavailable."));
 +		return;
 +	}
 +
@@ -436,9 +400,25 @@ index 00000000..d72f3746
 +	}
 +
 +	ExprTokenType headersTok;
-+	if (OptPresent(opts, _T("Headers"), headersTok) && headersTok.symbol == SYM_OBJECT && headersTok.object)
++	// A Map held in a variable arrives as SYM_VAR, not SYM_OBJECT, so testing the
++	// symbol directly silently skips the headers. Resolve the token to an
++	// IObject first; this is the same trap that JsonStringify hit.
++	if (OptPresent(opts, _T("Headers"), headersTok))
 +	{
-+		IObject *hobj = headersTok.object;
++		IObject *hobj = nullptr;
++		if (headersTok.symbol == SYM_VAR)
++		{
++			// VarRef: unwrap without taking a reference we would have to release.
++			ExprTokenType resolved;
++			headersTok.var->ToTokenSkipAddRef(resolved);
++			if (resolved.symbol == SYM_OBJECT)
++				hobj = resolved.object;
++		}
++		else if (headersTok.symbol == SYM_OBJECT)
++			hobj = headersTok.object;
++
++		if (hobj)
++		{
 +		// Both a Map and a plain Object literal may carry the headers.
 +		if (hobj->IsOfType(Map::sPrototype) || hobj->IsOfType(Object::sPrototype))
 +		{
@@ -457,6 +437,11 @@ index 00000000..d72f3746
 +					CStringUTF8FromWChar u(line);
 +					headerList = g_curl.slist_append(headerList, (LPCSTR)u);
 +				}
++				// CallEnumerator hands back references we own; leaking them keeps
++				// the argument objects alive for the life of the process.
++				vk->Release();
++				vv->Release();
++				enumerator->Release();
 +			}
 +		}
 +		else if (hobj->IsOfType(Array::sPrototype))
@@ -471,6 +456,7 @@ index 00000000..d72f3746
 +					headerList = g_curl.slist_append(headerList, (LPCSTR)u);
 +				}
 +			}
++		}
 +		}
 +	}
 +
@@ -568,7 +554,7 @@ index 00000000..d72f3746
 +		}
 +	}
 +
-+	int rc = g_curl.easy_perform(curl);
++	CURLcode rc = g_curl.easy_perform(curl);
 +
 +	long status = 0;
 +	g_curl.easy_getinfo(curl, CURLINFO_RESPONSE_CODE_, &status);
@@ -595,7 +581,7 @@ index 00000000..d72f3746
 +		CStringWCharFromUTF8 wMsg(g_curl.easy_strerror(rc));
 +		TCHAR err[512];
 +		sntprintf(err, _countof(err), _T("%s (curl code %d)")
-+			, g_curl.easy_strerror(rc) ? (LPCWSTR)wMsg : _T("request failed"), rc);
++			, g_curl.easy_strerror(rc) ? (LPCWSTR)wMsg : _T("request failed"), (int)rc);
 +		SetInt(out, _T("Ok"), 0);
 +		SetInt(out, _T("Status"), 0);
 +		SetStr(out, _T("StatusText"), _T(""));

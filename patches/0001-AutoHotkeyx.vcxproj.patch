@@ -1,8 +1,49 @@
 diff --git a/AutoHotkeyx.vcxproj b/AutoHotkeyx.vcxproj
-index 53045b17..d0d40478 100644
+index 53045b17..1d0eb235 100644
 --- a/AutoHotkeyx.vcxproj
 +++ b/AutoHotkeyx.vcxproj
-@@ -241,6 +241,8 @@
+@@ -89,7 +89,7 @@
+     </ClCompile>
+     <Link>
+       <SubSystem>Windows</SubSystem>
+-      <AdditionalDependencies>wsock32.lib;winmm.lib;version.lib;comctl32.lib;psapi.lib;wininet.lib;shlwapi.lib;uxtheme.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
++      <AdditionalDependencies>ws2_32.lib;iphlpapi.lib;wsock32.lib;winmm.lib;version.lib;comctl32.lib;psapi.lib;wininet.lib;shlwapi.lib;uxtheme.lib;dwmapi.lib;secur32.lib;crypt32.lib;bcrypt.lib;normaliz.lib;%(AdditionalDependencies)</AdditionalDependencies>
+       <StackReserveSize>4194304</StackReserveSize>
+       <TerminalServerAware Condition="!$(ConfigDll)">false</TerminalServerAware>
+       <DataExecutionPrevention>false</DataExecutionPrevention>
+@@ -132,7 +132,8 @@
+   <ItemDefinitionGroup>
+     <ClCompile>
+       <PrecompiledHeader Condition="!$(ConfigDebug)">Use</PrecompiledHeader>
+-      <AdditionalIncludeDirectories>$(ProjectDir)source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
++      <!-- ahk-ai patch: libcurl headers for the built-in HttpRequest function. -->
++      <AdditionalIncludeDirectories>$(ProjectDir)source;$(ProjectDir)..\third_party\curl-static\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+     </ClCompile>
+     <Link>
+       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+@@ -141,6 +142,21 @@
+       <AdditionalManifestFiles>source\resources\AutoHotkey.exe.manifest;%(AdditionalManifestFiles)</AdditionalManifestFiles>
+     </Manifest>
+   </ItemDefinitionGroup>
++  <!-- ahk-ai patch: statically link libcurl (Schannel backend, HTTP/HTTPS only),
++       so a single AutoHotkey exe needs no external DLL. Produced by
++       tools/build-libcurl-static.ps1. -->
++  <ItemDefinitionGroup Condition="'$(Platform)'=='x64'">
++    <Link>
++      <AdditionalLibraryDirectories>$(ProjectDir)..\third_party\curl-static\lib-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
++      <AdditionalDependencies>libcurl.lib;%(AdditionalDependencies)</AdditionalDependencies>
++    </Link>
++  </ItemDefinitionGroup>
++  <ItemDefinitionGroup Condition="'$(Platform)'=='Win32'">
++    <Link>
++      <AdditionalLibraryDirectories>$(ProjectDir)..\third_party\curl-static\lib-x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
++      <AdditionalDependencies>libcurl.lib;%(AdditionalDependencies)</AdditionalDependencies>
++    </Link>
++  </ItemDefinitionGroup>
+   <!-- AutoHotkey.dll -->
+   <ItemDefinitionGroup Condition="$(ConfigDll)">
+     <ClCompile>
+@@ -241,6 +257,8 @@
      <ClCompile Include="source\lib\input.cpp" />
      <ClCompile Include="source\lib\InputBox.cpp" />
      <ClCompile Include="source\lib\interop.cpp" />

@@ -16,6 +16,10 @@ permissions:
   contents: write
 
 env:
+  # The libcurl that third_party/curl-static was built from. The build step
+  # asserts the committed .lib matches this, so a stale import library can
+  # never be linked in silently.
+  CURL_VERSION: '8.22.0'
   # Keep in sync with the submodule pin; can be overridden per-run.
   UPSTREAM_REF: ${{ github.event.inputs.upstream_ref }}
 
@@ -44,6 +48,29 @@ jobs:
       - name: Apply patch series (check only)
         shell: pwsh
         run: pwsh -NoProfile -File tools/apply-patches.ps1 -CheckOnly
+
+      # libcurl is linked statically, so the build needs the committed import
+      # libraries. Catch a missing/corrupt one here rather than 40 minutes into
+      # a build, and record the hash so a release can be traced to its inputs.
+      - name: Verify static libcurl is present
+        shell: pwsh
+        run: |
+          $libs = @(
+            'third_party/curl-static/lib-x64/libcurl.lib',
+            'third_party/curl-static/lib-x86/libcurl.lib',
+            'third_party/curl-static/include/curl/curl.h'
+          )
+          $missing = @($libs | Where-Object { -not (Test-Path $_) })
+          if ($missing) {
+            Write-Output '::error::static libcurl inputs are missing:'
+            $missing | ForEach-Object { Write-Output "  $_" }
+            Write-Output 'Regenerate them with tools/build-libcurl-static.ps1 -Platform both'
+            exit 1
+          }
+          $libs | ForEach-Object {
+            $h = (Get-FileHash $_ -Algorithm SHA256).Hash
+            Write-Output ("{0}  {1}  {2:N0} B" -f $h, $_, (Get-Item $_).Length)
+          }
 
   build:
     needs: patch-check
@@ -81,6 +108,19 @@ jobs:
       - name: Report applied diff
         shell: pwsh
         run: git -C upstream diff --stat
+
+      # libcurl is linked statically from third_party/curl-static (committed), so
+      # there is no DLL to ship and no separate libcurl build step.
+      - name: Verify static libcurl is present
+        shell: pwsh
+        run: |
+          $bits = if ('${{ matrix.platform }}' -eq 'x64') { 'lib-x64' } else { 'lib-x86' }
+          $lib = "third_party/curl-static/$bits/libcurl.lib"
+          if (-not (Test-Path $lib)) {
+            Write-Output "::error::$lib is missing; run tools/build-libcurl-static.ps1 -Platform both"
+            exit 1
+          }
+          Write-Output ("{0}: {1:N0} bytes" -f $lib, (Get-Item $lib).Length)
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
@@ -128,6 +168,25 @@ jobs:
       - name: List artifact
         shell: pwsh
         run: Get-ChildItem -Recurse dist | Select-Object FullName, Length
+
+      # The whole point of the static link: one file, nothing beside it.
+      - name: Assert the exe is self-contained
+        shell: pwsh
+        run: |
+          $extra = @(Get-ChildItem dist -Recurse -File | Where-Object { $_.Name -ne 'AutoHotkey64.exe' })
+          if ($extra) {
+            Write-Output '::error::artifact should hold only AutoHotkey64.exe, found:'
+            $extra | ForEach-Object { Write-Output "  $($_.FullName)" }
+            exit 1
+          }
+          $ascii = [System.Text.Encoding]::ASCII.GetString(
+            [System.IO.File]::ReadAllBytes((Resolve-Path 'dist/AutoHotkey64.exe')))
+          if ($ascii -match 'libcurl[^"'']*\.dll') {
+            Write-Output "::error::exe still imports $($Matches[0]); the static link did not take"
+            exit 1
+          }
+          Write-Output 'OK: single self-contained exe, no libcurl DLL import'
+          Write-Output ("size: {0:N0} bytes" -f (Get-Item 'dist/AutoHotkey64.exe').Length)
 
       - name: Run non-interactive smoke tests
         shell: pwsh

@@ -14,6 +14,23 @@ dist/
 out/
 *.zip
 
+# ---------------------------------------------------------------------------
+# libcurl, statically linked into AutoHotkey.
+#
+# third_party/curl-static/ IS committed: include/ + lib-x64/ + lib-x86/ are the
+# build inputs CI needs, and they are only ~5 MB of binaries. Committing them
+# keeps CI fast and reproducible (no 10-minute libcurl compile per run).
+#
+# third_party/src/ (the unpacked curl source tree, ~25 MB) is NOT committed.
+# tools/build-libcurl-static.ps1 downloads and unpacks it on demand, and puts
+# its CMake build directory inside it (removed again unless -KeepBuild).
+# ---------------------------------------------------------------------------
+third_party/src/
+*.tar.gz
+
+# Superseded by the static link: the runtime DLL and CA bundle are gone.
+third_party/curl/
+
 # Editor / OS
 .vs/
 .vscode/
@@ -31,3 +48,6 @@ backup-stock/
 # scratch scripts used while testing
 /*.ahk
 
+
+# commit message scratch
+commitmsg.txt

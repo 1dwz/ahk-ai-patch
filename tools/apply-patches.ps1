@@ -5,6 +5,9 @@ Clone (or update) the upstream AutoHotkey submodule and apply the patch series.
 Idempotent: safe to re-run. Use -Reset to hard-discard any local edits in
 upstream/ and start from the pinned commit.
 
+-CheckOnly verifies the series applies to a pristine copy of the pinned commit
+WITHOUT touching upstream/, so it is safe to run before exporting patches.
+
 Usage:
   pwsh -NoProfile -File tools/apply-patches.ps1
   pwsh -NoProfile -File tools/apply-patches.ps1 -Reset
@@ -45,6 +48,59 @@ $pinned = (git -C $UpstreamDir rev-parse HEAD).Trim()
 $dirty  = (git -C $UpstreamDir status --porcelain)
 Write-Output "upstream HEAD : $pinned"
 
+# --- -CheckOnly: validate against a throwaway copy -------------------------
+# This must not touch the working tree. The usual reason to run it is to
+# validate freshly edited sources BEFORE exporting the series, and a reset here
+# would silently throw that work away (it did exactly that once).
+if ($CheckOnly) {
+    $probeDir = Join-Path ([System.IO.Path]::GetTempPath()) ('ahk-patchcheck-' + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Force -Path $probeDir | Out-Null
+    $failed = @()
+    try {
+        # Export the pristine tree from the object database rather than copying
+        # the working tree, so local edits cannot make a stale patch look valid.
+        $tarPath = Join-Path $probeDir 'src.tar'
+        git -C $UpstreamDir archive --format=tar $pinned -o $tarPath 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "git archive failed for $pinned" }
+        tar -xf $tarPath -C $probeDir
+        Remove-Item $tarPath -Force
+
+        # The unpacked tree has no repository; create one so `git apply` finds
+        # its usual context (index, autocrlf settings, ...).
+        git -C $probeDir init -q 2>&1 | Out-Null
+        git -C $probeDir config core.autocrlf false
+        git -C $probeDir config core.eol lf
+        git -C $probeDir add -A 2>&1 | Out-Null
+        git -C $probeDir -c user.email=check@local -c user.name=check commit -qm base 2>&1 | Out-Null
+
+        foreach ($p in $patches) {
+            $out = git -C $probeDir apply --check $p.FullName 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                Write-Output ("OK       {0}" -f $p.Name)
+                git -C $probeDir apply $p.FullName 2>&1 | Out-Null
+            } else {
+                $failed += $p.Name
+                Write-Output ("CONFLICT {0}" -f $p.Name)
+                $out | ForEach-Object { Write-Output ("    {0}" -f $_) }
+            }
+        }
+    } finally {
+        Remove-Item $probeDir -Recurse -Force -EA SilentlyContinue
+    }
+
+    if ($failed.Count) {
+        Write-Output ''
+        Write-Error ("{0} patch(es) did not apply: {1}`nThe upstream base probably moved. Rebase the series against {2}." `
+            -f $failed.Count, ($failed -join ', '), $pinned)
+        exit 1
+    }
+    Write-Output ''
+    Write-Output 'All patches apply cleanly.'
+    Write-Output '(checked against a pristine copy; upstream/ was not modified)'
+    exit 0
+}
+
+# --- discard drift in the working tree ------------------------------------
 if ($Reset -or $dirty) {
     if ($dirty -and -not $Reset) {
         Write-Output "upstream has local modifications; resetting to pinned commit"
@@ -63,18 +119,16 @@ if ($Reset -or $dirty) {
 # --- apply the series -----------------------------------------------------
 $failed = @()
 foreach ($p in $patches) {
-    $rel = $p.FullName
-    $probe = git -C $UpstreamDir apply --check $rel 2>&1
+    $probe = git -C $UpstreamDir apply --check $p.FullName 2>&1
     if ($LASTEXITCODE -eq 0) {
-        if ($CheckOnly) {
-            Write-Output ("OK      {0}" -f $p.Name)
+        git -C $UpstreamDir apply $p.FullName
+        if ($LASTEXITCODE -ne 0) {
+            $failed += $p.Name
+            Write-Output ("FAIL     {0}" -f $p.Name)
         } else {
-            git -C $UpstreamDir apply $rel
-            if ($LASTEXITCODE -ne 0) { $failed += $p.Name; Write-Output ("FAIL    {0}" -f $p.Name) }
-            else                     { Write-Output ("applied {0}" -f $p.Name) }
+            Write-Output ("applied  {0}" -f $p.Name)
         }
-    }
-    else {
+    } else {
         $failed += $p.Name
         Write-Output ("CONFLICT {0}" -f $p.Name)
         $probe | ForEach-Object { Write-Output ("    {0}" -f $_) }
@@ -87,8 +141,6 @@ if ($failed.Count) {
         -f $failed.Count, ($failed -join ', '), $pinned)
     exit 1
 }
-
-if ($CheckOnly) { Write-Output ''; Write-Output 'All patches apply cleanly.'; exit 0 }
 
 Write-Output ''
 git -C $UpstreamDir diff --stat

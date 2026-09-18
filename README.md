@@ -42,11 +42,20 @@ if (resp["Ok"])
 that fit in Int64 keep full precision, and malformed input raises a
 `ValueError` rather than silently yielding `""`.
 
-`HttpRequest` drives libcurl, loaded dynamically at first use. `build.ps1`
-stages `third_party/curl/libcurl-x64.dll` plus a CA bundle into `dist/curl/`, so
-HTTPS works without any system-wide setup. Transport failures come back as
-`Status = 0` with an `Error` field; HTTP error statuses (`404`) are normal
-returns with `Ok = 0`.
+`HttpRequest` drives **libcurl, linked statically** into the interpreter, so a
+built `AutoHotkey64.exe` is a single self-contained file — no `libcurl-x64.dll`
+to ship and no CA bundle to locate. TLS goes through **Schannel**, so
+certificates are validated against the Windows trust store. Transport failures
+come back as `Status = 0` with an `Error` field; HTTP error statuses (`404`) are
+normal returns with `Ok = 0`.
+
+The only new runtime dependencies are Windows' own libraries: `ws2_32.dll`,
+`iphlpapi.dll`, `secur32.dll`, `crypt32.dll` and `bcrypt.dll`.
+
+The prebuilt import libraries live in `third_party/curl-static/` (committed: the
+headers plus `lib-x64/libcurl.lib` and `lib-x86/libcurl.lib`, ~5 MB total).
+`tools/build-libcurl-static.ps1` regenerates them from curl source when a new
+curl is wanted.
 
 ### 2. Non-interactive / AI-friendly diagnostics (`/AI`, `/NonInteractive`)
 
@@ -94,10 +103,12 @@ Normal interactive behaviour is unchanged unless the switch is passed.
 │   ├── 0005-lib_json_builtin.cpp.patch
 │   ├── 0006-script.cpp.patch
 │   └── 0007-script.h.patch
-├── third_party/curl/       libcurl-x64.dll + curl-ca-bundle.crt (staged into dist/)
+├── third_party/curl-static/  libcurl headers + libcurl.lib for x64 and x86
+│                             (committed; built by tools/build-libcurl-static.ps1)
 ├── tools/
 │   ├── AhkAi.psm1          run the interpreter with a timeout + real stderr
 │   ├── apply-patches.ps1   clone/update upstream + apply the series
+│   ├── build-libcurl-static.ps1  build libcurl as a static lib for x64/x86
 │   ├── build.ps1           configure + build with MSBuild
 │   ├── download.ps1        fetch a CI artifact (and optionally smoke-test it)
 │   ├── export-patches.ps1  re-export the series from a working tree
@@ -154,8 +165,19 @@ pwsh -NoProfile -File tools/test-json-http.ps1 -Exe dist/AutoHotkey64.exe
 
 Requires VS 2022 Build Tools with the "Desktop development with C++" workload;
 `tools/build.ps1` locates it via `vswhere` and sources `vcvarsall.bat` itself.
-Output lands in `upstream/bin/AutoHotkey64.exe`, and `-OutDir` also stages
-`curl/` alongside it.
+Output lands in `upstream/bin/AutoHotkey64.exe`; `-OutDir` also copies it to
+`dist/` and asserts the result has no libcurl DLL import.
+
+Regenerating the static libcurl (only needed to bump curl itself):
+
+```powershell
+pwsh -NoProfile -File tools/build-libcurl-static.ps1 -Platform both
+```
+
+It downloads the pinned curl tarball into `third_party/src/` (git-ignored),
+builds it with VS's bundled CMake + Ninja against the MSVC runtime, and leaves
+the `.lib` files where the project expects them. `tools/build.ps1` never does
+this automatically — CI uses the committed `.lib` files so a build stays fast.
 
 `test-json-http.ps1` exercises the HTTP functions against `httpbin.org`, so it
 needs network access. CI has none, so the `verify` job runs it with `-SkipHttp`
