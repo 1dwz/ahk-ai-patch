@@ -1,0 +1,118 @@
+name: build
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: 'Upstream AutoHotkey ref to build (tag, branch or sha)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+env:
+  # Keep in sync with the submodule pin; can be overridden per-run.
+  UPSTREAM_REF: ${{ github.event.inputs.upstream_ref }}
+
+jobs:
+  # Cheap gate: fail fast if the series no longer applies to upstream.
+  patch-check:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Show pinned upstream
+        shell: pwsh
+        run: |
+          git -C upstream log -1 --oneline
+          git -C upstream describe --tags --always
+
+      - name: Optional upstream bump
+        if: env.UPSTREAM_REF != ''
+        shell: pwsh
+        run: |
+          git -C upstream fetch --depth 1 origin $env:UPSTREAM_REF
+          git -C upstream checkout FETCH_HEAD
+
+      - name: Apply patch series (check only)
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/apply-patches.ps1 -CheckOnly
+
+  build:
+    needs: patch-check
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { config: Release,             platform: x64,   artifact: AutoHotkey64-x64-Release }
+          - { config: Release,             platform: Win32, artifact: AutoHotkey32-Win32-Release }
+          - { config: Debug,               platform: x64,   artifact: AutoHotkey64-x64-Debug }
+          - { config: Self-contained,      platform: x64,   artifact: AutoHotkeySC-x64 }
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Optional upstream bump
+        if: env.UPSTREAM_REF != ''
+        shell: pwsh
+        run: |
+          git -C upstream fetch --depth 1 origin $env.UPSTREAM_REF
+          git -C upstream checkout FETCH_HEAD
+
+      - name: Apply patch series
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/apply-patches.ps1
+
+      - name: Report applied diff
+        shell: pwsh
+        run: git -C upstream diff --stat
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File tools/build.ps1 `
+            -Configuration '${{ matrix.config }}' `
+            -Platform '${{ matrix.platform }}' `
+            -OutDir dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+  # Only on Release/x64: verify the /AI contract from the freshly built exe.
+  verify:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download x64 Release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: AutoHotkey64-x64-Release
+          path: dist
+
+      - name: List artifact
+        shell: pwsh
+        run: Get-ChildItem -Recurse dist | Select-Object FullName, Length
+
+      - name: Run non-interactive smoke tests
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/test-noninteractive.ps1 -Exe dist/AutoHotkey64.exe

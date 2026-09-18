@@ -1,0 +1,3 @@
+# AutoHotkey upstream commit this patch series is based on.
+# Update with: git -C upstream checkout <ref> && git add upstream
+d8f819c16c08a61a605a746b3e6cc18fadee6c03

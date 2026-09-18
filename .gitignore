@@ -1,0 +1,22 @@
+# Build outputs
+upstream/bin/
+upstream/bin_*/
+upstream/temp/
+upstream/obj/
+upstream/*.vcxproj.user
+upstream/AutoHotkeyx.sdf
+upstream/*.opensdf
+upstream/*.suo
+upstream/ipch/
+
+# Local staging
+dist/
+out/
+*.zip
+
+# Editor / OS
+.vs/
+.vscode/
+*.swp
+Thumbs.db
+desktop.ini

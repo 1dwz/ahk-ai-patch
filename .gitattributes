@@ -1,0 +1,8 @@
+# The patch series is byte-sensitive: `git apply` matches context lines
+# exactly.  Force LF for patches and scripts so a Windows checkout with
+# core.autocrlf=true can't corrupt them.
+*.patch   text eol=lf
+*.ps1     text eol=lf
+*.yml     text eol=lf
+*.md      text eol=lf
+UPSTREAM_PIN text eol=lf

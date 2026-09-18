@@ -1,0 +1,120 @@
+diff --git a/source/error.cpp b/source/error.cpp
+index c24d806..7c489de 100644
+--- a/source/error.cpp
++++ b/source/error.cpp
+@@ -106,7 +106,10 @@ ResultType Script::ThrowRuntimeException(LPCTSTR aErrorText, LPCTSTR aExtraInfo
+ 			delete token;
+ 		if (!g->ThrownToken)
+ 		{
+-			MsgBox(ERR_OUTOFMEM ERR_ABORT);
++			if (mNonInteractive)
++				PrintDiagnostic(ERR_OUTOFMEM ERR_ABORT, _T(""), FAIL, aLine, nullptr);
++			else
++				MsgBox(ERR_OUTOFMEM ERR_ABORT);
+ 			return FAIL;
+ 		}
+ 		//else: Thrown by Error constructor?
+@@ -223,7 +226,18 @@ void Script::PrintErrorStdOut(LPCTSTR aErrorText, int aLength, LPCTSTR aFile)
+ int FormatStdErr(LPTSTR aBuf, int aBufSize, LPCTSTR aErrorText, LPCTSTR aExtraInfo, FileIndexType aFileIndex, LineNumberType aLineNumber, bool aWarn = false)
+ {
+ 	#define STD_ERROR_FORMAT _T("%s (%d) : ==> %s%s\n")
+-	int n = sntprintf(aBuf, aBufSize, STD_ERROR_FORMAT, Line::sSourceFile[aFileIndex], aLineNumber
++	// sSourceFile[] is not populated at all until LoadIncludedFile has started, and
++	// aFileIndex may still be 0/out-of-range while very early startup errors occur
++	// (e.g. "Script file not found").  Formatting it unconditionally would dereference
++	// a bogus pointer, so fall back to a placeholder when the table isn't usable.
++	LPCTSTR file = _T("<unknown>");
++	if (Line::sSourceFile && aFileIndex < Line::sSourceFileCount)
++	{
++		LPCTSTR candidate = Line::sSourceFile[aFileIndex];
++		if (candidate && *candidate)
++			file = candidate;
++	}
++	int n = sntprintf(aBuf, aBufSize, STD_ERROR_FORMAT, file, aLineNumber
+ 		, aWarn ? _T("Warning: ") : _T(""), aErrorText);
+ 	if (*aExtraInfo)
+ 		n += sntprintf(aBuf + n, aBufSize - n, _T("     Specifically: %s\n"), aExtraInfo);
+@@ -238,6 +252,26 @@ void Script::PrintErrorStdOut(LPCTSTR aErrorText, LPCTSTR aExtraInfo, FileIndexT
+ 	PrintErrorStdOut(buf, n, _T("**"));
+ }
+ 
++void Script::PrintDiagnostic(LPCTSTR aErrorText, LPCTSTR aExtraInfo, ResultType aErrorType, Line *aLine, Object *aException)
++{
++	if (!aErrorText)
++		aErrorText = _T("");
++	if (!aExtraInfo)
++		aExtraInfo = _T("");
++	FileIndexType file_index = aLine ? aLine->mFileIndex : mCurrFileIndex;
++	LineNumberType line_number = aLine ? aLine->mLineNumber : (mCombinedLineNumber ? mCombinedLineNumber : CurrentLine());
++	TCHAR buf[LINE_SIZE * 2];
++	int n = FormatStdErr(buf, _countof(buf), aErrorText, aExtraInfo, file_index, line_number, aErrorType == WARN);
++	if (aException)
++	{
++		LPCTSTR file = aException->GetOwnPropString(_T("File"));
++		LineNumberType line = (LineNumberType)aException->GetOwnPropInt64(_T("Line"));
++		if (file && *file)
++			n += sntprintf(buf + n, _countof(buf) - n, _T("File: %s\nLine: %u\n"), file, line);
++	}
++	PrintErrorStdOut(buf, n, _T("**"));
++}
++
+ ResultType Line::LineError(LPCTSTR aErrorText, ResultType aErrorType, LPCTSTR aExtraInfo)
+ {
+ 	ASSERT(aErrorText);
+@@ -722,6 +756,15 @@ ResultType Script::ShowError(LPCTSTR aErrorText, ResultType aErrorType, LPCTSTR
+ 
+ ResultType Script::ShowError(LPCTSTR aErrorText, ResultType aErrorType, LPCTSTR aExtraInfo, Line *aLine, Object *aException)
+ {
++	if (mNonInteractive)
++	{
++		PrintDiagnostic(aErrorText, aExtraInfo, aErrorType, aLine, aException);
++		if (aErrorType == FAIL_OR_OK)
++			return FAIL;
++		if (aErrorType == CRITICAL_ERROR)
++			TerminateApp(EXIT_CRITICAL, CRITICAL_ERROR);
++		return FAIL;
++	}
+ 	if (!aErrorText)
+ 		aErrorText = _T("");
+ 	if (!aExtraInfo)
+@@ -754,7 +797,12 @@ ResultType Script::ShowError(LPCTSTR aErrorText, ResultType aErrorType, LPCTSTR
+ 	if (result == IDCONTINUE && aErrorType == FAIL_OR_OK)
+ 		return OK;
+ 	if (result == -1) // May have failed to show the custom dialog box.
+-		MsgBox(aErrorText, MB_TOPMOST); // Keep it simple since it will hopefully never be needed.
++	{
++		if (mNonInteractive) // Belt-and-braces: never fall back to a GUI dialog.
++			PrintDiagnostic(aErrorText, aExtraInfo, aErrorType, aLine, aException);
++		else
++			MsgBox(aErrorText, MB_TOPMOST); // Keep it simple since it will hopefully never be needed.
++	}
+ 
+ 	if (aErrorType == CRITICAL_ERROR && mIsReadyToExecute)
+ 		ExitApp(EXIT_CRITICAL); // Pass EXIT_CRITICAL to ensure the program always exits, regardless of OnExit.
+@@ -857,6 +905,14 @@ ResultType Line::LineUnexpectedError()
+ ResultType Script::CriticalError(LPCTSTR aErrorText, LPCTSTR aExtraInfo)
+ {
+ 	g->ExcptMode = EXCPTMODE_NONE; // Do not throw an exception.
++	if (mNonInteractive)
++	{
++		// Never show a dialog.  mCurrLine may be NULL (e.g. failures very early in
++		// startup), so route everything through PrintDiagnostic, which tolerates that.
++		PrintDiagnostic(aErrorText, aExtraInfo, CRITICAL_ERROR, mCurrLine, nullptr);
++		TerminateApp(EXIT_CRITICAL, CRITICAL_ERROR);
++		return FAIL; // Never executed.
++	}
+ 	if (mCurrLine)
+ 		mCurrLine->LineError(aErrorText, CRITICAL_ERROR, aExtraInfo);
+ 	// mCurrLine should always be non-NULL during runtime, and CRITICAL_ERROR should
+@@ -1307,6 +1363,11 @@ bool Line::CatchThis(ExprTokenType &aThrown) // ACT_CATCH
+ 
+ void Script::ScriptWarning(WarnMode warnMode, LPCTSTR aWarningText, LPCTSTR aExtraInfo, Line *line)
+ {
++	if (mNonInteractive)
++	{
++		PrintDiagnostic(aWarningText, aExtraInfo, WARN, line);
++		return;
++	}
+ 	if (!line) line = mCurrLine;
+ 	int fileIndex = line ? line->mFileIndex : mCurrFileIndex;
+ 	FileIndexType lineNumber = line ? line->mLineNumber : mCombinedLineNumber;

@@ -1,0 +1,63 @@
+diff --git a/source/script.cpp b/source/script.cpp
+index 80fb021..cbaeb95 100644
+--- a/source/script.cpp
++++ b/source/script.cpp
+@@ -318,7 +318,7 @@ Script::Script()
+ 	, mFileSpec(_T("")), mFileDir(_T("")), mFileName(_T("")), mOurEXE(_T("")), mOurEXEDir(_T("")), mMainWindowTitle(_T(""))
+ 	, mScriptName(NULL)
+ 	, mIsReadyToExecute(false), mAutoExecSectionIsRunning(false)
+-	, mIsRestart(false), mErrorStdOut(false), mErrorStdOutCP(0)
++	, mIsRestart(false), mErrorStdOut(false), mNonInteractive(false), mErrorStdOutCP(0)
+ #ifndef AUTOHOTKEYSC
+ 	, mValidateThenExit(false)
+ 	, mCmdLineInclude(NULL)
+@@ -606,6 +606,16 @@ ResultType Script::CreateWindows()
+ // Returns OK or FAIL.
+ {
+ 	if (!mMainWindowTitle || !*mMainWindowTitle) return FAIL;  // Init() must be called before this function.
++	if (mNonInteractive)
++	{
++		// Non-interactive (AI/CLI) mode: create no windows, no tray icon and no
++		// message-filter hook.  Scripts that need a main window (ListLines, the
++		// tray menu, Reload/Edit) are not usable in this mode, but diagnostics
++		// must never depend on a window existing or being message-pumped.
++		g_NoTrayIcon = true;
++		mNIC.hWnd = NULL;
++		return OK;
++	}
+ 	// Register a window class for the main window:
+ 	WNDCLASSEX wc = {0};
+ 	wc.cbSize = sizeof(wc);
+@@ -1053,7 +1063,14 @@ ResultType Script::AutoExecSection()
+ 
+ 	// Check if an exception has been thrown
+ 	if (g->ThrownToken)
++	{
++		if (mNonInteractive && result == OK)
++			// A thread died from an unhandled runtime error, but the auto-exec thread
++			// itself may have "completed normally".  Report failure to the caller so
++			// that the process exit code is non-zero (AI/CLI callers rely on this).
++			result = FAIL;
+ 		g_script.FreeExceptionToken(g->ThrownToken);
++	}
+ 
+ 	// Now that the auto-execute thread has finished, ensure that the very first g-item is always
+ 	// interruptible.  This avoids having to treat the first g-item as special in various places.
+@@ -1411,7 +1428,7 @@ UINT Script::LoadFromFile(LPCTSTR aFileSpec)
+ 	DWORD attr = mKind == ScriptKindFile ? GetFileAttributes(aFileSpec) : 0; // v1.1.17: Don't check if reading script from stdin.
+ 	if (attr == MAXDWORD) // File does not exist or lacking the authorization to get its attributes.
+ 	{
+-		if (!g_script.mErrorStdOut)
++		if (!g_script.mErrorStdOut && !mNonInteractive)
+ 		{
+ 			TCHAR buf[T_MAX_PATH + 24];
+ 			sntprintf(buf, _countof(buf), _T("%s\n%s"), ERR_SCRIPT_NOT_FOUND, aFileSpec);
+@@ -1420,7 +1437,7 @@ UINT Script::LoadFromFile(LPCTSTR aFileSpec)
+ 		else
+ 		{
+ 			Line::sSourceFile = &mFileSpec;
+-			ScriptError(ERR_SCRIPT_NOT_FOUND);
++			ScriptError(ERR_SCRIPT_NOT_FOUND, aFileSpec);
+ 		}
+ 		return LOADING_FAILED;
+ 	}

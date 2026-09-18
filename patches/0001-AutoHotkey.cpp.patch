@@ -1,0 +1,58 @@
+diff --git a/source/AutoHotkey.cpp b/source/AutoHotkey.cpp
+index 02936c3..ab551f9 100644
+--- a/source/AutoHotkey.cpp
++++ b/source/AutoHotkey.cpp
+@@ -30,7 +30,7 @@ GNU General Public License for more details.
+ 
+ ResultType InitForExecution();
+ ResultType ParseCmdLineArgs(LPTSTR &script_filespec);
+-ResultType CheckPriorInstance();
++	ResultType CheckPriorInstance();
+ int MainExecuteScript(bool aMsgSleep = true);
+ 
+ 
+@@ -130,6 +130,11 @@ ResultType ParseCmdLineArgs(LPTSTR &script_filespec)
+ 			g_script.mIsRestart = true;
+ 		else if (!_tcsicmp(param, _T("/force")))
+ 			g_ForceLaunch = true;
++		else if (!_tcsicmp(param, _T("/AI")) || !_tcsicmp(param, _T("/NonInteractive")))
++		{
++			g_script.SetNonInteractive();
++			g_script.SetErrorStdOut(NULL);
++		}
+ #ifndef AUTOHOTKEYSC // i.e. the following switch is recognized only by AutoHotkey.exe (especially since recognizing new switches in compiled scripts can break them, unlike AutoHotkey.exe).
+ 		else if (!_tcsicmp(param, _T("/script")))
+ 			script_filespec = NULL; // Override compiled script mode, otherwise no effect.
+@@ -221,10 +226,20 @@ ResultType CheckPriorInstance()
+ 			if (g_AllowOnlyOneInstance == SINGLE_INSTANCE_IGNORE)
+ 				return EARLY_EXIT;
+ 			if (g_AllowOnlyOneInstance != SINGLE_INSTANCE_REPLACE)
++			{
++				if (g_script.mNonInteractive)
++				{
++					// A prompt would block forever with no user.  #SingleInstance Prompt
++					// (the default) must be treated as "ignore" in non-interactive mode.
++					g_script.PrintDiagnostic(_T("Another instance of this script is already running.  ")
++						_T("Exiting this instance instead of prompting (#SingleInstance)."), _T(""), WARN, nullptr, nullptr);
++					return EARLY_EXIT;
++				}
+ 				if (MsgBox(_T("An older instance of this script is already running.  Replace it with this")
+ 					_T(" instance?\nNote: To avoid this message, see #SingleInstance in the help file.")
+ 					, MB_YESNO, g_script.mFileName) == IDNO)
+ 					return EARLY_EXIT;
++			}
+ 			// Otherwise:
+ 			reason_to_close_prior = AHK_EXIT_BY_SINGLEINSTANCE;
+ 		}
+@@ -255,6 +270,11 @@ ResultType CheckPriorInstance()
+ 				// This can happen if the previous instance has an OnExit function that takes a long
+ 				// time to finish, or if it's waiting for a network drive to timeout or some other
+ 				// operation in which it's thread is occupied.
++				if (g_script.mNonInteractive)
++				{
++					g_script.PrintDiagnostic(_T("Could not close the previous instance of this script."), _T(""), FAIL, nullptr, nullptr);
++					return FAIL;
++				}
+ 				if (MsgBox(_T("Could not close the previous instance of this script.  Keep waiting?"), 4) == IDNO)
+ 					return FAIL;
+ 				interval_count = 0;
