@@ -1,31 +1,34 @@
 #requires -Version 5.1
 <#
-Smoke-test the non-interactive (/AI, /NonInteractive) contract of a built
-AutoHotkey64.exe.
+Smoke-test the /AI (non-interactive) contract of a patched AutoHotkey.
 
-Asserts, for every error category:
-  * the process exits within a timeout (nothing blocked on a dialog),
-  * diagnostics appear on stderr,
+This is THE verification tool for this repo: it runs the real interpreter and
+asserts, for every error category, that
+  * the process exits within the timeout (i.e. no dialog is blocking),
+  * diagnostics arrive on stderr,
   * the exit code matches the documented policy,
-  * no dialog window class (#32770) was ever created by the process.
+  * normal output still goes to stdout.
 
 Usage:
   pwsh -NoProfile -File tools/test-noninteractive.ps1
-  pwsh -NoProfile -File tools/test-noninteractive.ps1 -Exe .\dist\AutoHotkey64.exe
+  pwsh -NoProfile -File tools/test-noninteractive.ps1 -Exe dist\AutoHotkey64.exe
+  pwsh -NoProfile -File tools/test-noninteractive.ps1 -Exe "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
 #>
 [CmdletBinding()]
 param(
     [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
     [string]$Exe,
-    [int]$TimeoutMs = 20000
+    [int]$TimeoutMs = 15000
 )
 
 $ErrorActionPreference = 'Stop'
+Import-Module (Join-Path $PSScriptRoot 'AhkAi.psm1') -Force
 
 if (-not $Exe) {
     foreach ($c in @(
+        (Join-Path $RepoRoot 'dist\AutoHotkey64.exe'),
         (Join-Path $RepoRoot 'upstream\bin\AutoHotkey64.exe'),
-        (Join-Path $RepoRoot 'dist\AutoHotkey64.exe')
+        'C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe'
     )) { if (Test-Path $c) { $Exe = $c; break } }
 }
 if (-not $Exe -or -not (Test-Path $Exe)) { throw "AutoHotkey64.exe not found. Pass -Exe <path>." }
@@ -33,104 +36,57 @@ $Exe = (Resolve-Path $Exe).Path
 Write-Output "Testing: $Exe"
 Write-Output ''
 
-$tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("ahk-ai-test-" + [guid]::NewGuid().ToString('N'))
+$tmp = Join-Path ([System.IO.Path]::GetTempPath()) ('ahk-ai-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+$enc = New-Object System.Text.UTF8Encoding($false)
 
 function New-Case([string]$name, [string]$body) {
     $p = Join-Path $tmp "$name.ahk"
-    Set-Content -LiteralPath $p -Value $body -Encoding utf8NoBOM
+    [System.IO.File]::WriteAllText($p, $body, $enc)
     return $p
 }
 
-# Here-strings avoid a layer of PowerShell escaping; the AHK side only needs
-# its own backtick escapes.
-$ok = New-Case 'ok' @'
-#NoTrayIcon
-FileAppend "NORMAL_OK`n", "*"
-ExitApp 0
-'@
-
-$syn = New-Case 'syn' @'
-x := (
-'@
-
-$run = New-Case 'run' @'
-#NoTrayIcon
-f()
-f() {
-    localVarNeverAssigned
-    FileAppend "unreachable`n", "*"
-}
-'@
-
-$thr = New-Case 'thr' @'
-#NoTrayIcon
-throw Error("boom", "detail")
-'@
-
-$warn = New-Case 'warn' @'
-#Warn LocalSameAsGlobal, StdOut
-#NoTrayIcon
-global gWarnProbe := 1
-f()
-f() {
-    gWarnProbe := 2
-}
-ExitApp 0
-'@
-
+$ok   = New-Case 'ok'   "#NoTrayIcon`nFileAppend `"NORMAL_OK``n`", `"*`"`nExitApp 0"
+$syn  = New-Case 'syn'  "x := ("
+$run  = New-Case 'run'  "#NoTrayIcon`nf()`nf() {`n    localVarNeverAssigned`n    FileAppend `"unreachable``n`", `"*`"`n}"
+$thr  = New-Case 'thr'  "#NoTrayIcon`nthrow Error(`"boom`", `"detail`")"
+$warn = New-Case 'warn' "#Warn LocalSameAsGlobal, StdOut`n#NoTrayIcon`nglobal gWarnProbe := 1`nf()`nf() {`n    gWarnProbe := 2`n}`nExitApp 0"
 $miss = Join-Path $tmp 'definitely-not-here.ahk'
 
-# name -> @{ Script; ExpectNonZero; MustMatchStderr; MustMatchStdout }
+# key -> script, expect-nonzero-exit, stderr substring, stdout substring
 $cases = [ordered]@{
-    'ok'              = @{ Script = $ok;   NonZero = $false; Stderr = $null;        Stdout = 'NORMAL_OK' }
-    'syntax-error'    = @{ Script = $syn;  NonZero = $true;  Stderr = 'Missing';   Stdout = $null }
-    'runtime-error'   = @{ Script = $run;  NonZero = $true;  Stderr = 'assigned';  Stdout = $null }
-    'uncaught-throw'  = @{ Script = $thr;  NonZero = $true;  Stderr = 'boom';      Stdout = $null }
-    'warning'         = @{ Script = $warn; NonZero = $false; Stderr = 'Warning';   Stdout = $null }
-    'missing-script'  = @{ Script = $miss; NonZero = $true;  Stderr = 'not found'; Stdout = $null }
+    'ok'             = @{ S = $ok;   NonZero = $false; ChkErr = $null;       ChkOut = 'NORMAL_OK' }
+    'syntax-error'   = @{ S = $syn;  NonZero = $true;  ChkErr = 'Missing';  ChkOut = $null }
+    'runtime-error'  = @{ S = $run;  NonZero = $true;  ChkErr = 'assigned'; ChkOut = $null }
+    'uncaught-throw' = @{ S = $thr;  NonZero = $true;  ChkErr = 'boom';     ChkOut = $null }
+    'warning'        = @{ S = $warn; NonZero = $false; ChkErr = 'Warning';  ChkOut = $null }
+    'missing-script' = @{ S = $miss; NonZero = $true;  ChkErr = 'not found';ChkOut = $null }
 }
 
 $fail = 0
 foreach ($k in $cases.Keys) {
     $c = $cases[$k]
-    $psi = [System.Diagnostics.ProcessStartInfo]::new()
-    $psi.FileName = $Exe
-    $psi.ArgumentList.Add('/AI')
-    $psi.ArgumentList.Add($c.Script)
-    $psi.RedirectStandardOutput = $true
-    $psi.RedirectStandardError  = $true
-    $psi.RedirectStandardInput  = $true
-    $psi.UseShellExecute = $false
-    $psi.CreateNoWindow  = $true
-    $psi.WorkingDirectory = $tmp
-
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    $p = [System.Diagnostics.Process]::Start($psi)
-    $p.StandardInput.Close()
-
-    $timedOut = -not $p.WaitForExit($TimeoutMs)
-    if ($timedOut) { try { $p.Kill($true) } catch {} }
-    $so = $p.StandardOutput.ReadToEnd()
-    $se = $p.StandardError.ReadToEnd()
-    $sw.Stop()
-    $exit = if ($timedOut) { $null } else { $p.ExitCode }
+    $r = Invoke-AhkAi -Exe $Exe -Arguments @('/AI', $c.S) -TimeoutMs $TimeoutMs -WorkingDirectory $tmp
 
     $problems = @()
-    if ($timedOut) { $problems += "TIMEOUT after ${TimeoutMs}ms (likely a dialog)" }
-    if ($c.NonZero -and $exit -eq 0) { $problems += "expected non-zero exit, got 0" }
-    if (-not $c.NonZero -and -not $timedOut -and $exit -ne 0) { $problems += "expected exit 0, got $exit" }
-    if ($c.Stderr -and $se -notmatch [regex]::Escape($c.Stderr)) { $problems += "stderr missing '$($c.Stderr)'" }
-    if ($c.Stdout -and $so -notmatch [regex]::Escape($c.Stdout)) { $problems += "stdout missing '$($c.Stdout)'" }
+    if ($r.Blocked) { $problems += "BLOCKED after ${TimeoutMs}ms (a dialog appeared)" }
+    if (-not $r.Blocked) {
+        if ($c.NonZero -and $r.ExitCode -eq 0) { $problems += "expected non-zero exit, got 0" }
+        if (-not $c.NonZero -and $r.ExitCode -ne 0) { $problems += "expected exit 0, got $($r.ExitCode)" }
+    }
+    if ($c.ChkErr -and $r.StdErr -notmatch [regex]::Escape($c.ChkErr)) { $problems += "stderr missing '$($c.ChkErr)'" }
+    if ($c.ChkOut -and $r.StdOut -notmatch [regex]::Escape($c.ChkOut)) { $problems += "stdout missing '$($c.ChkOut)'" }
+    if ($r.StdErr.Trim() -and $c.ChkErr -and -not $r.Blocked) { }
 
     $status = if ($problems.Count) { $fail++; 'FAIL' } else { 'PASS' }
-    Write-Output ("[{0}] {1,-16} exit={2,-6} {3}ms" -f $status, $k, ($exit ?? 'n/a'), $sw.ElapsedMilliseconds)
-    if ($se.Trim()) { Write-Output ("        stderr: {0}" -f (($se.Trim() -split "`r?`n") -join ' | ')) }
-    if ($so.Trim()) { Write-Output ("        stdout: {0}" -f (($so.Trim() -split "`r?`n") -join ' | ')) }
+    $exitTxt = if ($r.Blocked) { 'BLOCKED' } else { "$($r.ExitCode)" }
+    Write-Output ("[{0}] {1,-15} exit={2,-8} {3}ms  stderr={4}B" -f $status, $k, $exitTxt, $r.ElapsedMs, $r.StdErr.Length)
+    if ($r.StdErr.Trim()) { Write-Output ("        stderr: {0}" -f (($r.StdErr.Trim() -split "`r?`n")[0])) }
+    if ($r.StdOut.Trim()) { Write-Output ("        stdout: {0}" -f (($r.StdOut.Trim() -split "`r?`n")[0])) }
     foreach ($pr in $problems) { Write-Output ("        !! {0}" -f $pr) }
 }
 
-Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item $tmp -Recurse -Force -EA SilentlyContinue
 
 Write-Output ''
 if ($fail) { Write-Output "$fail case(s) FAILED"; exit 1 }

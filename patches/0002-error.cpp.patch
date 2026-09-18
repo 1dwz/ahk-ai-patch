@@ -1,5 +1,5 @@
 diff --git a/source/error.cpp b/source/error.cpp
-index c24d8061..59e3f278 100644
+index c24d8061..58957b27 100644
 --- a/source/error.cpp
 +++ b/source/error.cpp
 @@ -106,7 +106,10 @@ ResultType Script::ThrowRuntimeException(LPCTSTR aErrorText, LPCTSTR aExtraInfo
@@ -14,7 +14,94 @@ index c24d8061..59e3f278 100644
  			return FAIL;
  		}
  		//else: Thrown by Error constructor?
-@@ -223,7 +226,18 @@ void Script::PrintErrorStdOut(LPCTSTR aErrorText, int aLength, LPCTSTR aFile)
+@@ -208,12 +211,86 @@ void Script::SetErrorStdOut(LPTSTR aParam)
+ 	// be a sufficient clue that the /ErrorStdOut= value was invalid.
+ }
+ 
++// Writes a diagnostic straight to the process's stderr handle.
++//
++// Deliberately avoids TextFile/TextStream: opening "**" with APPEND remaps the
++// access mode to READ internally (see TextFile::Open), which leaves the stream
++// in read mode so buffered writes are never flushed. The net effect was that
++// /AI diagnostics were silently discarded whenever stderr was a pipe or a
++// redirected file (e.g. PowerShell, or `2>err.txt`), even though they appeared
++// to work in a plain console.
++void Script::WriteDiagnosticRaw(LPCTSTR aText, int aLength)
++{
++	if (!aText || !*aText)
++		return;
++	if (aLength < 0)
++		aLength = (int)_tcslen(aText);
++	if (!aLength)
++		return;
++
++	HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
++	if (!h || h == INVALID_HANDLE_VALUE)
++		return;
++
++	DWORD written = 0;
++	// WriteFile handles disk/pipe handles; WriteConsoleW is required for a real
++	// console when the buffer contains non-ASCII (WriteFile would garble it).
++	DWORD ft = GetFileType(h);
++	if (ft == FILE_TYPE_CHAR)
++	{
++		// Console: write UTF-16 (wchar_t) directly.
++		WriteConsoleW(h, aText, (DWORD)aLength, &written, nullptr);
++	}
++	else
++	{
++#ifdef UNICODE
++		// Non-console: convert to UTF-8 so redirected/piped output is readable.
++		int need = WideCharToMultiByte(CP_UTF8, 0, aText, aLength, nullptr, 0, nullptr, nullptr);
++		if (need > 0)
++		{
++			char *utf8 = (char *)malloc(need + 1);
++			if (utf8)
++			{
++				WideCharToMultiByte(CP_UTF8, 0, aText, aLength, utf8, need, nullptr, nullptr);
++				utf8[need] = '\0';
++				DWORD n = (DWORD)need, off = 0;
++				while (off < n)
++				{
++					DWORD chunk = 0;
++					if (!WriteFile(h, utf8 + off, n - off, &chunk, nullptr) || !chunk)
++						break;
++					off += chunk;
++				}
++				free(utf8);
++			}
++		}
++#else
++		DWORD n = (DWORD)aLength, off = 0;
++		while (off < n)
++		{
++			DWORD chunk = 0;
++			if (!WriteFile(h, aText + off, n - off, &chunk, nullptr) || !chunk)
++				break;
++			off += chunk;
++		}
++#endif
++	}
++	FlushFileBuffers(h);
++}
++
+ void Script::PrintErrorStdOut(LPCTSTR aErrorText, int aLength, LPCTSTR aFile)
+ {
+ #ifdef CONFIG_DEBUGGER
+ 	if (g_Debugger.OutputStdOut(aErrorText))
+ 		return;
+ #endif
++	if (mNonInteractive && aFile && aFile[0] == '*' && aFile[1] == '*' && !aFile[2])
++	{
++		// In non-interactive mode always take the robust raw path, so diagnostics
++		// survive pipes and redirection (see WriteDiagnosticRaw).
++		WriteDiagnosticRaw(aErrorText, aLength);
++		return;
++	}
+ 	TextFile tf;
+ 	tf.Open(aFile, TextStream::APPEND, mErrorStdOutCP);
+ 	tf.Write(aErrorText, aLength);
+@@ -223,7 +300,18 @@ void Script::PrintErrorStdOut(LPCTSTR aErrorText, int aLength, LPCTSTR aFile)
  int FormatStdErr(LPTSTR aBuf, int aBufSize, LPCTSTR aErrorText, LPCTSTR aExtraInfo, FileIndexType aFileIndex, LineNumberType aLineNumber, bool aWarn = false)
  {
  	#define STD_ERROR_FORMAT _T("%s (%d) : ==> %s%s\n")
@@ -34,7 +121,7 @@ index c24d8061..59e3f278 100644
  		, aWarn ? _T("Warning: ") : _T(""), aErrorText);
  	if (*aExtraInfo)
  		n += sntprintf(aBuf + n, aBufSize - n, _T("     Specifically: %s\n"), aExtraInfo);
-@@ -238,6 +252,39 @@ void Script::PrintErrorStdOut(LPCTSTR aErrorText, LPCTSTR aExtraInfo, FileIndexT
+@@ -238,6 +326,39 @@ void Script::PrintErrorStdOut(LPCTSTR aErrorText, LPCTSTR aExtraInfo, FileIndexT
  	PrintErrorStdOut(buf, n, _T("**"));
  }
  
@@ -74,7 +161,7 @@ index c24d8061..59e3f278 100644
  ResultType Line::LineError(LPCTSTR aErrorText, ResultType aErrorType, LPCTSTR aExtraInfo)
  {
  	ASSERT(aErrorText);
-@@ -722,6 +769,15 @@ ResultType Script::ShowError(LPCTSTR aErrorText, ResultType aErrorType, LPCTSTR
+@@ -722,6 +843,15 @@ ResultType Script::ShowError(LPCTSTR aErrorText, ResultType aErrorType, LPCTSTR
  
  ResultType Script::ShowError(LPCTSTR aErrorText, ResultType aErrorType, LPCTSTR aExtraInfo, Line *aLine, Object *aException)
  {
@@ -90,7 +177,7 @@ index c24d8061..59e3f278 100644
  	if (!aErrorText)
  		aErrorText = _T("");
  	if (!aExtraInfo)
-@@ -754,7 +810,12 @@ ResultType Script::ShowError(LPCTSTR aErrorText, ResultType aErrorType, LPCTSTR
+@@ -754,7 +884,12 @@ ResultType Script::ShowError(LPCTSTR aErrorText, ResultType aErrorType, LPCTSTR
  	if (result == IDCONTINUE && aErrorType == FAIL_OR_OK)
  		return OK;
  	if (result == -1) // May have failed to show the custom dialog box.
@@ -104,7 +191,7 @@ index c24d8061..59e3f278 100644
  
  	if (aErrorType == CRITICAL_ERROR && mIsReadyToExecute)
  		ExitApp(EXIT_CRITICAL); // Pass EXIT_CRITICAL to ensure the program always exits, regardless of OnExit.
-@@ -857,6 +918,14 @@ ResultType Line::LineUnexpectedError()
+@@ -857,6 +992,14 @@ ResultType Line::LineUnexpectedError()
  ResultType Script::CriticalError(LPCTSTR aErrorText, LPCTSTR aExtraInfo)
  {
  	g->ExcptMode = EXCPTMODE_NONE; // Do not throw an exception.
@@ -119,7 +206,7 @@ index c24d8061..59e3f278 100644
  	if (mCurrLine)
  		mCurrLine->LineError(aErrorText, CRITICAL_ERROR, aExtraInfo);
  	// mCurrLine should always be non-NULL during runtime, and CRITICAL_ERROR should
-@@ -1307,6 +1376,11 @@ bool Line::CatchThis(ExprTokenType &aThrown) // ACT_CATCH
+@@ -1307,6 +1450,11 @@ bool Line::CatchThis(ExprTokenType &aThrown) // ACT_CATCH
  
  void Script::ScriptWarning(WarnMode warnMode, LPCTSTR aWarningText, LPCTSTR aExtraInfo, Line *line)
  {
