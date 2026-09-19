@@ -262,6 +262,15 @@ jobs:
             throw 'pristine binary missing after build'
           }
 
+      # The parity script's last section compares the PATCHED parser source
+      # (upstream/) with the pristine source (pristine-test/) to prove the new
+      # switches are additions.  upstream/ is a clean submodule checkout here, so
+      # apply the series first -- the pristine build above already archived the
+      # submodule HEAD from git, which is unaffected by worktree patches.
+      - name: Apply patch series (for the source-addition comparison)
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/apply-patches.ps1
+
       - name: Assert behaviour is unchanged outside the new switches
         shell: pwsh
         run: |
