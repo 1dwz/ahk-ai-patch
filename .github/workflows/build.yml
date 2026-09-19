@@ -169,14 +169,31 @@ jobs:
         shell: pwsh
         run: Get-ChildItem -Recurse dist | Select-Object FullName, Length
 
-      # The whole point of the static link: one file, nothing beside it.
-      - name: Assert the exe is self-contained
+      # The whole point of the static link: one executable and nothing it has
+      # to load beside it.  The generated API docs are deliberately allowed
+      # through -- they ship with the binary so a downloader can read the
+      # function list -- but anything else (a DLL, a CA bundle, a stray
+      # object) means the self-containment claim is broken.
+      - name: Assert the artifact holds no loadable dependency
         shell: pwsh
         run: |
-          $extra = @(Get-ChildItem dist -Recurse -File | Where-Object { $_.Name -ne 'AutoHotkey64.exe' })
+          $allowed = @('AutoHotkey64.exe', 'BUILTIN_API.md', 'builtin-api.json')
+          $extra = @(Get-ChildItem dist -Recurse -File | Where-Object { $allowed -notcontains $_.Name })
           if ($extra) {
-            Write-Output '::error::artifact should hold only AutoHotkey64.exe, found:'
+            Write-Output "::error::unexpected file(s) in the artifact (allowed: $($allowed -join ', ')):"
             $extra | ForEach-Object { Write-Output "  $($_.FullName)" }
+            exit 1
+          }
+          foreach ($doc in 'BUILTIN_API.md', 'builtin-api.json') {
+            if (-not (Test-Path "dist/$doc")) {
+              Write-Output "::error::$doc missing; the doc generation step did not run"
+              exit 1
+            }
+          }
+          # A loadable DLL beside the exe would defeat the single-file promise.
+          $dlls = @(Get-ChildItem dist -Recurse -File -Filter *.dll)
+          if ($dlls) {
+            Write-Output "::error::a DLL shipped beside the exe: $($dlls.Name -join ', ')"
             exit 1
           }
           $ascii = [System.Text.Encoding]::ASCII.GetString(
@@ -185,7 +202,7 @@ jobs:
             Write-Output "::error::exe still imports $($Matches[0]); the static link did not take"
             exit 1
           }
-          Write-Output 'OK: single self-contained exe, no libcurl DLL import'
+          Write-Output 'OK: no DLL beside the exe, no libcurl DLL import, docs present'
           Write-Output ("size: {0:N0} bytes" -f (Get-Item 'dist/AutoHotkey64.exe').Length)
 
       - name: Run non-interactive smoke tests
