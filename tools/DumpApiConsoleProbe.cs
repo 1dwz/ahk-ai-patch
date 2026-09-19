@@ -44,6 +44,7 @@ class DumpApiConsoleProbe
     static extern IntPtr CreateFileW(string name, uint access, uint share, IntPtr sec,
         uint disp, uint flags, IntPtr templ);
     [DllImport("kernel32.dll")] static extern bool SetConsoleOutputCP(uint cp);
+    [DllImport("kernel32.dll", SetLastError = true)] static extern bool SetConsoleScreenBufferSize(IntPtr h, COORD size);
     [DllImport("kernel32.dll", SetLastError = true)] static extern bool SetHandleInformation(
         IntPtr h, uint mask, uint flags);
 
@@ -65,7 +66,48 @@ class DumpApiConsoleProbe
     [StructLayout(LayoutKind.Sequential)]
     struct PROCESS_INFORMATION { public IntPtr hProcess, hThread; public int pid, tid; }
 
+    // The dump is ~354 lines, and a terminal's default screen buffer is much
+    // shorter than that.  Without resizing, the child's output scrolls and only
+    // the TAIL stays in the buffer, so the reader finds section 2 (the typed
+    // registry) and misses the "# AutoHotkey built-in functions" header -- which
+    // reads exactly like "the dump was dropped".  That is a false negative that
+    // only shows up on a machine whose console is small enough (it did not
+    // reproduce locally, where the buffer happened to fit).
+    //
+    // Grow the buffer before the child runs so nothing scrolls away.  The window
+    // is deliberately left alone: the subject must run under ordinary console
+    // conditions.  Sizes are tried largest-first because a console may reject a
+    // value too far beyond its maximum.  Returns the height actually achieved
+    // (0 on failure).
+    static short ForceBufferHeight(short rows)
+    {
+        CONSOLE_SCREEN_BUFFER_INFO info;
+        if (!GetConsoleScreenBufferInfo(conOut, out info)) return 0;
+        short width = info.size.X;
+        if (width < 120) width = 120;
+        if (SetConsoleScreenBufferSize(conOut, new COORD { X = width, Y = rows }))
+            return rows;
+        return 0;
+    }
+
+    static void EnsureBufferFits(int rows)
+    {
+        CONSOLE_SCREEN_BUFFER_INFO info;
+        if (!GetConsoleScreenBufferInfo(conOut, out info)) return;
+        if (info.size.Y >= rows) return;
+        for (short h = (short)rows; h >= 200; h = (short)(h - 200))
+        {
+            if (ForceBufferHeight(h) != 0) return;
+        }
+    }
+
     static IntPtr conOut;
+
+    static int BufferHeight()
+    {
+        CONSOLE_SCREEN_BUFFER_INFO info;
+        return GetConsoleScreenBufferInfo(conOut, out info) ? info.size.Y : -1;
+    }
 
     static string ReadConsole()
     {
@@ -195,10 +237,18 @@ class DumpApiConsoleProbe
         report.AppendLine();
     }
 
+    // Usage: probe <exe> <reportFile> [badScript] [growRows] [emulateRows]
+    //
+    // growRows    0 disables the buffer grow (the pre-fix behaviour).
+    // emulateRows >0 shrinks the console to that many rows BEFORE growing it,
+    //             which emulates a cramped console such as a CI runner's and
+    //             makes the failure mode reproducible on a roomy machine.
     static int Main(string[] args)
     {
         string exe = args[0];
-        string badScript = args.Length > 2 ? args[2] : null;
+        string badScript = args.Length > 2 && args[2] != "" ? args[2] : null;
+        int growRows = args.Length > 3 ? int.Parse(args[3]) : 4000;
+        int emulateRows = args.Length > 4 ? int.Parse(args[4]) : 0;
 
         // Open the console device directly and never rely on GetStdHandle: if the
         // caller redirected our stdout, AllocConsole points STD_OUTPUT at the new
@@ -211,6 +261,11 @@ class DumpApiConsoleProbe
         if (conOut == new IntPtr(-1)) conOut = GetStdHandle(-11);
         // The self-check hands this handle to a child, so it must be inheritable.
         SetHandleInformation(conOut, HANDLE_FLAG_INHERIT_MASK, 1);
+        // Order matters: squeeze the console first (emulating a cramped runner),
+        // then let the fix grow it, so a passing run proves the grow is what
+        // saved the header rather than a roomy starting buffer.
+        if (emulateRows > 0) ForceBufferHeight((short)emulateRows);
+        if (growRows > 0) EnsureBufferFits(growRows);
 
         var report = new StringBuilder();
         string cmdExe = Environment.GetEnvironmentVariable("COMSPEC") ?? @"C:\Windows\System32\cmd.exe";
@@ -228,6 +283,7 @@ class DumpApiConsoleProbe
         bool readbackOk = c.Contains("SENTINEL-ALPHA") && c.Contains("SENTINEL-BETA");
         report.AppendLine("CASE 0  harness self-check (our sentinel + a child's output)");
         report.AppendLine("        exit=" + rc0);
+        report.AppendLine("        console buffer rows     : " + BufferHeight());
         report.AppendLine("        sees SENTINEL-ALPHA (ours, written + read back) : " + c.Contains("SENTINEL-ALPHA"));
         report.AppendLine("        sees SENTINEL-BETA  (child process, explicit handle) : " + c.Contains("SENTINEL-BETA"));
         report.AppendLine("        read-back reliable         : " + readbackOk);

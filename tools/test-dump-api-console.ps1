@@ -18,6 +18,14 @@ The probe also self-checks its read-back (sentinels) and runs a positive control
 (`/AI` on a bad script, which does call AttachConsole) so that "nothing printed"
 can never be confused with "the reader is broken".
 
+One more trap, learned from CI: the dump is ~354 lines but a runner's console
+buffer is far shorter, so the output scrolls and only the tail survives -- the
+header is gone, and the reader sees the typed-registry section instead.  That is
+indistinguishable from "the dump was dropped" and it does NOT reproduce on a
+roomy local console.  The probe therefore grows the buffer before the child runs,
+and this test forces the cramped case on every machine so the fix is exercised
+everywhere rather than only where the screen happens to be small.
+
 Usage:
   pwsh -NoProfile -File tools/test-dump-api-console.ps1 -Exe dist\AutoHotkey64.exe
 
@@ -64,7 +72,19 @@ try {
     # a console-owning launcher cannot be observed through a pipe -- exactly the
     # condition that hides the bug under test.  It writes its findings to
     # $capture and carries the verdict in its exit code.
-    & $probeExe $Exe $capture $badScript
+    # Run the probe with a deliberately CRAMPED console.
+    #
+    # Emulating a small console is the point, not an accident: CI reported the fix
+    # as still-broken on a healthy local machine, because a runner's console is
+    # far shorter than the ~354-line dump.  The child's output then scrolls and
+    # only the tail remains, so the reader finds the typed-registry section and
+    # misses the "# AutoHotkey built-in functions" header -- indistinguishable
+    # from "the dump was dropped".
+    #
+    # Passing the emulate height forces that condition on every machine, so the
+    # grow-the-buffer fix is exercised here and a regression fails locally too
+    # rather than only on CI.
+    & $probeExe $Exe $capture $badScript 4000 30
     $exit = $LASTEXITCODE
     $text = if (Test-Path $capture) { [System.IO.File]::ReadAllText($capture) } else { '' }
 
@@ -76,6 +96,10 @@ try {
     $ok = $true
     if ($text -notmatch 'read-back reliable\s*:\s*True') {
         Write-Output '::error::the console read-back is unreliable; this run proves nothing'
+        $ok = $false
+    }
+    if ($text -match 'console buffer rows\s*:\s*(\d+)' -and [int]$Matches[1] -lt 4000) {
+        Write-Output "::error::the console buffer was not grown (rows=$($Matches[1])); the dump can scroll out of it"
         $ok = $false
     }
     if ($text -notmatch 'case 1 prints the table\s*:\s*True') {
