@@ -244,9 +244,23 @@ jobs:
           }
           # No setup-msbuild needed: build.ps1 locates VS itself via vswhere and
           # sources vcvarsall.bat, so it behaves the same here as in the build job.
+          #
+          # Deliberately NO -OutDir here.  The -OutDir branch of build.ps1 runs
+          # /dump-api, /AI and docs generation against the binary it just built --
+          # correct for the patched exe, but the pristine control does not know
+          # those switches, and would treat /dump-api as a script path, pop a
+          # "Script file not found" dialog and hang a headless runner forever
+          # (observed: 46 min stuck on this step, while the real build takes 41 s
+          # in the build job).  Without -OutDir the build lands in
+          # pristine-test/bin/ and no console checks run; copy it for parity.
           pwsh -NoProfile -File tools/build.ps1 -UpstreamDir pristine-test `
-               -Configuration Release -Platform x64 -OutDir pristine-dist
+               -Configuration Release -Platform x64
           if ($LASTEXITCODE -ne 0) { throw "pristine build failed: $LASTEXITCODE" }
+          New-Item -ItemType Directory -Force -Path pristine-dist | Out-Null
+          Copy-Item pristine-test/bin/AutoHotkey64.exe pristine-dist/AutoHotkey64.exe
+          if (-not (Test-Path 'pristine-dist/AutoHotkey64.exe')) {
+            throw 'pristine binary missing after build'
+          }
 
       - name: Assert behaviour is unchanged outside the new switches
         shell: pwsh
