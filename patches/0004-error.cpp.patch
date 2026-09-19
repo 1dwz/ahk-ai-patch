@@ -1,5 +1,5 @@
 diff --git a/source/error.cpp b/source/error.cpp
-index c24d8061..58957b27 100644
+index c24d8061..123d300a 100644
 --- a/source/error.cpp
 +++ b/source/error.cpp
 @@ -106,7 +106,10 @@ ResultType Script::ThrowRuntimeException(LPCTSTR aErrorText, LPCTSTR aExtraInfo
@@ -101,17 +101,29 @@ index c24d8061..58957b27 100644
  	TextFile tf;
  	tf.Open(aFile, TextStream::APPEND, mErrorStdOutCP);
  	tf.Write(aErrorText, aLength);
-@@ -223,7 +300,18 @@ void Script::PrintErrorStdOut(LPCTSTR aErrorText, int aLength, LPCTSTR aFile)
+@@ -223,7 +300,30 @@ void Script::PrintErrorStdOut(LPCTSTR aErrorText, int aLength, LPCTSTR aFile)
  int FormatStdErr(LPTSTR aBuf, int aBufSize, LPCTSTR aErrorText, LPCTSTR aExtraInfo, FileIndexType aFileIndex, LineNumberType aLineNumber, bool aWarn = false)
  {
  	#define STD_ERROR_FORMAT _T("%s (%d) : ==> %s%s\n")
 -	int n = sntprintf(aBuf, aBufSize, STD_ERROR_FORMAT, Line::sSourceFile[aFileIndex], aLineNumber
-+	// sSourceFile[] is not populated at all until LoadIncludedFile has started, and
-+	// aFileIndex may still be 0/out-of-range while very early startup errors occur
-+	// (e.g. "Script file not found").  Formatting it unconditionally would dereference
-+	// a bogus pointer, so fall back to a placeholder when the table isn't usable.
++	// ahk-ai patch: guard only against a genuinely unusable pointer.
++	//
++	// Upstream dereferences Line::sSourceFile[aFileIndex] unconditionally, which
++	// is fine as long as the table has been set up.  Two startup paths do that
++	// without bumping sSourceFileCount, so a count-based bound check would be
++	// WRONG: LoadFromFile's "Script file not found" branch sets
++	// `Line::sSourceFile = &mFileSpec` with the count still 0, and
++	// LoadIncludedFile sets sSourceFile[0] then ++sSourceFileCount.  Requiring
++	// aFileIndex < sSourceFileCount rejects both of those and prints
++	// "<unknown>" where upstream prints the real script path -- which is exactly
++	// the field editors parse to jump to the offending line.
++	//
++	// What CAN be unusable is the pointer itself before any source file exists
++	// (sSourceFile is initialised to NULL for realloc()), and an empty string.
++	// Fall back only for those two, so every previously-working case formats
++	// byte-identically to stock.
 +	LPCTSTR file = _T("<unknown>");
-+	if (Line::sSourceFile && aFileIndex < Line::sSourceFileCount)
++	if (Line::sSourceFile)
 +	{
 +		LPCTSTR candidate = Line::sSourceFile[aFileIndex];
 +		if (candidate && *candidate)
@@ -121,7 +133,7 @@ index c24d8061..58957b27 100644
  		, aWarn ? _T("Warning: ") : _T(""), aErrorText);
  	if (*aExtraInfo)
  		n += sntprintf(aBuf + n, aBufSize - n, _T("     Specifically: %s\n"), aExtraInfo);
-@@ -238,6 +326,39 @@ void Script::PrintErrorStdOut(LPCTSTR aErrorText, LPCTSTR aExtraInfo, FileIndexT
+@@ -238,6 +338,39 @@ void Script::PrintErrorStdOut(LPCTSTR aErrorText, LPCTSTR aExtraInfo, FileIndexT
  	PrintErrorStdOut(buf, n, _T("**"));
  }
  
@@ -161,7 +173,7 @@ index c24d8061..58957b27 100644
  ResultType Line::LineError(LPCTSTR aErrorText, ResultType aErrorType, LPCTSTR aExtraInfo)
  {
  	ASSERT(aErrorText);
-@@ -722,6 +843,15 @@ ResultType Script::ShowError(LPCTSTR aErrorText, ResultType aErrorType, LPCTSTR
+@@ -722,6 +855,15 @@ ResultType Script::ShowError(LPCTSTR aErrorText, ResultType aErrorType, LPCTSTR
  
  ResultType Script::ShowError(LPCTSTR aErrorText, ResultType aErrorType, LPCTSTR aExtraInfo, Line *aLine, Object *aException)
  {
@@ -177,7 +189,7 @@ index c24d8061..58957b27 100644
  	if (!aErrorText)
  		aErrorText = _T("");
  	if (!aExtraInfo)
-@@ -754,7 +884,12 @@ ResultType Script::ShowError(LPCTSTR aErrorText, ResultType aErrorType, LPCTSTR
+@@ -754,7 +896,12 @@ ResultType Script::ShowError(LPCTSTR aErrorText, ResultType aErrorType, LPCTSTR
  	if (result == IDCONTINUE && aErrorType == FAIL_OR_OK)
  		return OK;
  	if (result == -1) // May have failed to show the custom dialog box.
@@ -191,7 +203,7 @@ index c24d8061..58957b27 100644
  
  	if (aErrorType == CRITICAL_ERROR && mIsReadyToExecute)
  		ExitApp(EXIT_CRITICAL); // Pass EXIT_CRITICAL to ensure the program always exits, regardless of OnExit.
-@@ -857,6 +992,14 @@ ResultType Line::LineUnexpectedError()
+@@ -857,6 +1004,14 @@ ResultType Line::LineUnexpectedError()
  ResultType Script::CriticalError(LPCTSTR aErrorText, LPCTSTR aExtraInfo)
  {
  	g->ExcptMode = EXCPTMODE_NONE; // Do not throw an exception.
@@ -206,7 +218,7 @@ index c24d8061..58957b27 100644
  	if (mCurrLine)
  		mCurrLine->LineError(aErrorText, CRITICAL_ERROR, aExtraInfo);
  	// mCurrLine should always be non-NULL during runtime, and CRITICAL_ERROR should
-@@ -1307,6 +1450,11 @@ bool Line::CatchThis(ExprTokenType &aThrown) // ACT_CATCH
+@@ -1307,6 +1462,11 @@ bool Line::CatchThis(ExprTokenType &aThrown) // ACT_CATCH
  
  void Script::ScriptWarning(WarnMode warnMode, LPCTSTR aWarningText, LPCTSTR aExtraInfo, Line *line)
  {

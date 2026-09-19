@@ -81,18 +81,6 @@ function Expand-AliasGroups([string]$s, [int]$depth = 0) {
     return $s
 }
 
-# --- extra parameter names for patch-added built-ins ----------------------
-# HttpRequest / JsonParse / JsonStringify are registered through BIF1(...) in
-# script.cpp, which records arity but no parameter names. Their real
-# signatures only exist in the implementation, so they are spelled out here.
-# extract-api-docs.ps1 verifies the arity below against the interpreter, so a
-# mismatch fails the build rather than silently documenting the wrong thing.
-$manualSignatures = @{
-    'HttpRequest'   = @{ Params = @('url', 'options');                              Returns = 'Map' }
-    'JsonParse'     = @{ Params = @('text');                                        Returns = 'Any' }
-    'JsonStringify' = @{ Params = @('value', 'indent');                             Returns = 'String' }
-}
-
 # --- read the g_BIF registry from script.cpp -------------------------------
 # functions.h declares parameter types, but not every built-in appears there:
 # the `g_BIF[]` table in script.cpp is the definitive runtime list, and it is
@@ -249,9 +237,8 @@ foreach ($d in $decls) {
 $entries = @($entries | Sort-Object Name)
 
 # --- include built-ins that only exist in g_BIF ----------------------------
-# The patch set registers HttpRequest / JsonParse / JsonStringify through
-# BIF1(...) in script.cpp rather than through functions.h, so they would
-# otherwise be missing from the generated reference entirely.
+# Not every built-in is declared in functions.h; some exist only as a BIF row
+# in script.cpp, so they would otherwise be missing from the reference.
 $declared = @{}
 foreach ($e in $entries) { $declared[$e.Name] = $true }
 
@@ -259,32 +246,19 @@ $extra = @()
 foreach ($name in ($gBif.Keys | Sort-Object)) {
     if ($declared.ContainsKey($name)) { continue }
     $g = $gBif[$name]
-    # Fill in parameter names for patch-added functions from the table above.
-    $manual = $null
-    if ($manualSignatures.ContainsKey($name)) { $manual = $manualSignatures[$name] }
 
     $extra += [pscustomobject]@{
         Name           = $name
         Variant        = 'func'
-        ReturnType     = if ($manual) { $manual.Returns } else { $null }
+        ReturnType     = $null
         ReturnName     = $null
-        # Rebuild as real parameters so the signature renders with names. Every
-        # one of these has a fixed maximum, so positional optionality from the
-        # g_BIF min count is accurate.
-        Params         = if ($manual) {
-            $i = 0
-            @($manual.Params | ForEach-Object {
-                $i++
-                [pscustomobject]@{ Kind = if ($i -le $g.Min) { 'In' } else { 'In_Opt' }; Type = ''; Name = $_; Required = ($i -le $g.Min) }
-            })
-        } else { @() }
+        Params         = @()
         Min            = $g.Min
         Max            = $g.Max
         Condition      = $null
         Statement      = $false
         Variadic       = $g.Variadic
-        # Flag it so the docs can say where to find its parameter details.
-        RegisteredOnly = (-not $manual)
+        RegisteredOnly = $true
     }
 }
 if ($extra.Count) {

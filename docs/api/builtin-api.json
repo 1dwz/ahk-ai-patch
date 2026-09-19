@@ -1,8 +1,8 @@
 {
   "generated_by": "/dump-api",
-  "interpreter": "C:\\ProgramData\\Autohotkey\\ahk-patch\\dist\\AutoHotkey64.exe",
-  "count": 357,
-  "g_bif_count": 104,
+  "interpreter": "D:\\MyFiles\\workspace\\ahk-patch\\dist\\AutoHotkey64.exe",
+  "count": 354,
+  "g_bif_count": 101,
   "s_mdfunc_count": 253,
   "functions": [
     {
@@ -1903,16 +1903,6 @@
       "outputs": null
     },
     {
-      "name": "HttpRequest",
-      "registry": "patch",
-      "signature": "HttpRequest(url, [, options])  -> Map",
-      "arguments": null,
-      "min_params": 1,
-      "max_params": 0,
-      "variadic": false,
-      "outputs": null
-    },
-    {
       "name": "IL_Add",
       "registry": "sMdFunc",
       "signature": "IL_Add(UInt64, String, [, Int32], [, Bool32])  -> Int32",
@@ -2202,26 +2192,6 @@
       "name": "IsXDigit",
       "registry": "g_BIF",
       "signature": "IsXDigit(arg1)",
-      "arguments": null,
-      "min_params": 1,
-      "max_params": 0,
-      "variadic": false,
-      "outputs": null
-    },
-    {
-      "name": "JsonParse",
-      "registry": "patch",
-      "signature": "JsonParse(text)  -> Any",
-      "arguments": null,
-      "min_params": 1,
-      "max_params": 0,
-      "variadic": false,
-      "outputs": null
-    },
-    {
-      "name": "JsonStringify",
-      "registry": "patch",
-      "signature": "JsonStringify(value, [, indent])  -> String",
       "arguments": null,
       "min_params": 1,
       "max_params": 0,

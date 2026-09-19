@@ -113,44 +113,18 @@ if (Test-Path $built) {
         Copy-Item $built (Join-Path $OutDir $exeName) -Force
         Write-Output ("Copied to: {0}" -f (Join-Path $OutDir $exeName))
 
-        # libcurl is linked statically (see third_party/curl-static), so the
-        # output is a single self-contained exe. Clean up the runtime DLL and
-        # CA bundle that the earlier dynamic-loading build staged here, and
-        # fail loudly if this exe still imports libcurl's DLL.
-        $stale = Join-Path $OutDir 'curl'
-        if (Test-Path $stale) {
-            Remove-Item $stale -Recurse -Force -EA SilentlyContinue
-            Write-Output "Removed : $stale (no longer needed with static libcurl)"
-        }
-
-        $bytes = [System.IO.File]::ReadAllBytes((Join-Path $OutDir $exeName))
-        $ascii = [System.Text.Encoding]::ASCII.GetString($bytes)
-        if ($ascii -match 'libcurl[^"'']*\.dll') {
-            Write-Warning "$exeName still references $($Matches[0]); the static link did not take."
-        } else {
-            Write-Output 'Static  : no libcurl DLL import (linked in)'
-        }
-
         # Generate the built-in API reference next to the binary, straight out
         # of the build we just produced.  Doing it here means the docs can
         # never describe a different build than the one shipped, and it works
         # for a consumer who only downloads the artifact.
-        # The generated index can only list signatures.  The three functions this
-        # patch set adds take an options object whose real surface no signature
-        # table can express, so the hand-written guide ships beside the
-        # executable -- otherwise BUILTIN_API.md links to a file the downloader
-        # does not have.
         #
-        # Copy the reference documentation FIRST so the generator's -GuideLink can
-        # be a verified sibling filename rather than a guess, and so everything
-        # named in docs/ARTIFACT_CONTENTS.txt exists before it is checked.
-        $guideCopied = $false
-        foreach ($guide in 'BUILTIN_HTTP_JSON.md', 'debugging.md', 'v2-gotchas.md', 'README-AI.md') {
+        # Copy the reference documentation FIRST so everything named in
+        # docs/ARTIFACT_CONTENTS.txt exists before it is checked.
+        foreach ($guide in 'debugging.md', 'v2-gotchas.md', 'README-AI.md') {
             $src = Join-Path $RepoRoot "docs\$guide"
             if (Test-Path $src) {
                 Copy-Item $src (Join-Path $OutDir $guide) -Force
                 Write-Output "Docs    : $guide"
-                if ($guide -eq 'BUILTIN_HTTP_JSON.md') { $guideCopied = $true }
             } else {
                 Write-Warning "hand-written guide missing: $src"
             }
@@ -166,30 +140,12 @@ if (Test-Path $built) {
                     Json      = (Join-Path $OutDir 'builtin-api.json')
                     Quiet     = $true
                 }
-                if ($guideCopied) { $genArgs['GuideLink'] = 'BUILTIN_HTTP_JSON.md' }
                 & $gen @genArgs
                 Write-Output "Docs    : BUILTIN_API.md + builtin-api.json ($LASTEXITCODE)"
             } catch {
                 # Documentation must never fail a build; the binary is the
                 # deliverable and this is a derived artifact.
                 Write-Warning "could not generate the API reference: $($_.Exception.Message)"
-            }
-        }
-
-        # The hand-written guide ships beside the executable and makes concrete
-        # claims the generated index cannot check.  Warn rather than fail, for
-        # the same reason as the other documentation steps.
-        $docTest = Join-Path $RepoRoot 'tools\test-doc-claims.ps1'
-        if (Test-Path $docTest) {
-            try {
-                & $docTest -Exe (Join-Path $OutDir $exeName) -RepoRoot $RepoRoot
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Output 'Docs    : documented claims match the build'
-                } else {
-                    Write-Warning "documented claims do NOT match the build ($LASTEXITCODE)"
-                }
-            } catch {
-                Write-Warning "doc claim check could not run: $($_.Exception.Message)"
             }
         }
 
@@ -249,6 +205,30 @@ if (Test-Path $built) {
                 Write-Warning "console visibility check could not run: $($_.Exception.Message)"
             } finally {
                 Remove-Item $visLog -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        # /dump-api has the same console problem as /AI and the same blind spot:
+        # piping or redirecting gives it a real handle, so every automated check
+        # passed while typing the command printed nothing (GUI-subsystem binary,
+        # no inherited console).  Same rule as above: do not capture its output.
+        $dumpTest = Join-Path $RepoRoot 'tools\test-dump-api-console.ps1'
+        if (Test-Path $dumpTest) {
+            $dumpLog = Join-Path $env:TEMP ('ahk-dumpvis-{0}.txt' -f ([guid]::NewGuid().ToString('N')))
+            try {
+                & $dumpTest -Exe (Join-Path $OutDir $exeName) -RepoRoot $RepoRoot *> $dumpLog
+                $dumpCode = $LASTEXITCODE
+                $dumpOut = if (Test-Path $dumpLog) { Get-Content $dumpLog -Raw } else { '' }
+                if ($dumpCode -eq 0 -and $dumpOut -match 'OK: /dump-api output is visible') {
+                    Write-Output 'Console : /dump-api output visible on a bare console'
+                } else {
+                    Write-Warning "/dump-api output is NOT visible on a bare console (exit $dumpCode)"
+                    ($dumpOut -split "`r?`n") | Where-Object { $_ } | ForEach-Object { Write-Warning "  $_" }
+                }
+            } catch {
+                Write-Warning "dump-api console check could not run: $($_.Exception.Message)"
+            } finally {
+                Remove-Item $dumpLog -Force -ErrorAction SilentlyContinue
             }
         }
 

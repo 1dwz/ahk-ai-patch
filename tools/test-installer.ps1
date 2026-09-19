@@ -24,6 +24,9 @@
 param(
     [string] $Setup = (Join-Path $PSScriptRoot '..\dist\AHK-v2-Setup.exe'),
     [string] $InstallDir = 'C:\Program Files\AHK-v2',
+    # Built-in function count of the build under test.  The default matches this
+    # patch set, which does not add or remove any built-in.
+    [int]    $ExpectedFunctions = 354,
     [switch] $Keep
 )
 
@@ -126,7 +129,7 @@ foreach ($f in 'AutoHotkey64.exe', 'AutoHotkey32.exe', 'uninstall.exe') {
     Check "$f installed" (Test-Path $p) $p
 }
 
-foreach ($f in 'BUILTIN_API.md', 'builtin-api.json', 'BUILTIN_HTTP_JSON.md', 'v2-gotchas.md', 'debugging.md') {
+foreach ($f in 'BUILTIN_API.md', 'builtin-api.json', 'v2-gotchas.md', 'debugging.md') {
     $p = Join-Path $InstallDir "doc\$f"
     Check "doc\$f installed" (Test-Path $p) $p
 }
@@ -178,13 +181,7 @@ foreach ($arch in '64', '32') {
     $exe = Join-Path $InstallDir "AutoHotkey$arch.exe"
     $r = Invoke-AhkAi -Exe $exe -Arguments @('/dump-api') -TimeoutMs 60000
     $n = ([regex]::Matches($r.StdOut, '(?m)^\w+\t')).Count
-    Check "AutoHotkey$arch.exe /dump-api -> 357" ($r.ExitCode -eq 0 -and $n -eq 357) "exit=$($r.ExitCode) n=$n"
-}
-
-# The patched-only functions must be reachable from the installed copy.
-$r = Invoke-AhkAi -Exe (Join-Path $InstallDir 'AutoHotkey64.exe') -Arguments @('/dump-api') -TimeoutMs 60000
-foreach ($fn in 'HttpRequest', 'JsonStringify', 'JsonParse') {
-    Check "$fn present in the installed build" ($r.StdOut -match "(?m)^$fn\t")
+    Check "AutoHotkey$arch.exe /dump-api -> $ExpectedFunctions" ($r.ExitCode -eq 0 -and $n -eq $ExpectedFunctions) "exit=$($r.ExitCode) n=$n"
 }
 
 # The install dir must not carry any external DLL dependency.
@@ -195,7 +192,6 @@ if ($dumpbin) {
     $vcvars = 'C:\BuildTools\VC\Auxiliary\Build\vcvars64.bat'
     if ((Test-Path $dumpbin) -and (Test-Path $vcvars)) {
         $dep = cmd /c "`"$vcvars`" >nul 2>&1 && `"$dumpbin`" /dependents `"$InstallDir\AutoHotkey64.exe`"" 2>&1 | Out-String
-        Check 'no libcurl DLL dependency' ($dep -notmatch 'libcurl') 
         Check 'no non-system DLL beyond Windows' ($dep -notmatch '(?i)\b(msvcp|vcruntime|api-ms-win-crt)')
     }
 }

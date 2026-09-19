@@ -6,21 +6,16 @@ was run against, not the source it was built from.
 
 Interpreter: `AutoHotkey64.exe`
 
-**357 built-in functions.** Every name appears in exactly one of two
+**354 built-in functions.** Every name appears in exactly one of two
 internal registries, so both are reported:
 
 | Registry | Count | Carries |
 | --- | --- | --- |
-| `g_BIF` (`source/script.cpp`) | 104 | minimum/maximum argument count, variadic flag, output parameters |
+| `g_BIF` (`source/script.cpp`) | 101 | minimum/maximum argument count, variadic flag, output parameters |
 | `sMdFunc` (`source/MdFunc.cpp`) | 253 | full argument and return types |
 
 Prefer the typed signature where one exists: it tells you what each
 argument must be. `[, x]` marks an optional argument.
-
-> `HttpRequest`, `JsonParse` and `JsonStringify` are added by this patch
-> set. Their signatures are listed below, but their behaviour and the
-> `HttpRequest` options object are documented by hand in
-> [../BUILTIN_HTTP_JSON.md](../BUILTIN_HTTP_JSON.md) -- read that before using them.
 
 ## All functions
 
@@ -166,7 +161,6 @@ argument must be. `[, x]` marks an optional argument.
 | `HotIfWinNotExist` | `HotIfWinNotExist([, String], [, String])  -> Variant` | sMdFunc |
 | `Hotkey` | `Hotkey(String, [, Variant], [, String])` | sMdFunc |
 | `Hotstring` | `Hotstring(String, [, Variant], [, String])  -> Variant` | sMdFunc |
-| `HttpRequest` | `HttpRequest(url, [, options])  -> Map` | declared in the patch |
 | `IL_Add` | `IL_Add(UInt64, String, [, Int32], [, Bool32])  -> Int32` | sMdFunc |
 | `IL_Create` | `IL_Create([, Int32], [, Int32], [, Bool32])` | sMdFunc |
 | `IL_Destroy` | `IL_Destroy(UInt64)` | sMdFunc |
@@ -192,8 +186,6 @@ argument must be. `[, x]` marks an optional argument.
 | `IsTime` | `IsTime(arg1)` | g_BIF |
 | `IsUpper` | `IsUpper(arg1)` | g_BIF |
 | `IsXDigit` | `IsXDigit(arg1)` | g_BIF |
-| `JsonParse` | `JsonParse(text)  -> Any` | declared in the patch |
-| `JsonStringify` | `JsonStringify(value, [, indent])  -> String` | declared in the patch |
 | `KeyHistory` | `KeyHistory([, Int32])` | sMdFunc |
 | `KeyWait` | `KeyWait(String, [, String])  -> Bool32` | sMdFunc |
 | `ListHotkeys` | `ListHotkeys()` | sMdFunc |

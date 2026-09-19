@@ -3,15 +3,19 @@
 This directory is a self-contained AutoHotkey v2 interpreter built for machine
 use. Point your tooling at the two exes here; nothing else is required.
 
+The behavioural changes against stock AutoHotkey are two **additive switches**:
+`/AI` (plus its alias `/NonInteractive`), described below, and `/dump-api`, which
+prints the built-in function table and exits. No built-in function was added,
+removed or altered: the built-in set is exactly upstream's.
+
 ## What is here
 
 | Path | What it is |
 |---|---|
-| `AutoHotkey64.exe` | 64-bit interpreter (static libcurl, no DLLs to ship) |
+| `AutoHotkey64.exe` | 64-bit interpreter (no DLLs to ship) |
 | `AutoHotkey32.exe` | 32-bit interpreter, same patches |
 | `doc/BUILTIN_API.md` | Every built-in function signature, arity and return type |
 | `doc/builtin-api.json` | The same index, machine-readable |
-| `doc/BUILTIN_HTTP_JSON.md` | The `HttpRequest` / `JsonStringify` / `JsonParse` additions |
 | `doc/debugging.md` | How to run scripts so errors are actually visible |
 | `doc/v2-gotchas.md` | Traps that cost time if you do not know them |
 | `uninstall.exe` | Removes everything this installer added |
@@ -40,31 +44,16 @@ happened:
 AutoHotkey64.exe /dump-api
 ```
 
-Writes one `name<TAB>signature` line per built-in function. This build reports
-**357**; a stock v2 interpreter reports the same number but is missing the three
-functions below, so check for those rather than trusting the count alone:
-
-```powershell
-AutoHotkey64.exe /dump-api | Select-String '^(HttpRequest|JsonStringify|JsonParse)\b'
-```
-
-## The additions
-
-```ahk
-resp := HttpRequest("https://example.com/api", { Method: "POST", Body: '{"a":1}' })
-; -> Map with Status, Body, Headers
-
-text := JsonStringify(Map("a", 1, "b", [1,2,3]))
-obj  := JsonParse(text)
-```
-
-See `doc/BUILTIN_HTTP_JSON.md` for the full option list and the error model.
+Writes the built-in function table and exits without loading a script. The table
+has two sections -- `g_BIF` entries as `name<TAB>min<TAB>max<TAB>variadic<TAB>outputs`,
+then typed functions as `name<TAB>return<TAB>args`. This build reports **354**
+functions (101 + 253), the same set as a stock v2 interpreter at the same
+upstream commit. Stock AutoHotkey does not recognise `/dump-api` at all, so a
+zero exit code is itself the proof that this is the patched build.
 
 ## Notes for an agent
 
 - Prefer the **64-bit** exe unless a 32-bit-only dependency forces otherwise.
-- `HttpRequest` uses Schannel, so it needs no CA bundle and respects the
-  machine's proxy and certificate settings.
 - A wrong built-in argument count is a **load-time** failure (exit 2), not a
   catchable exception. Check `MinParams` / `MaxParams` before calling, or read
   `doc/BUILTIN_API.md`.

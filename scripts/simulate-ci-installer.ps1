@@ -17,7 +17,7 @@ try {
     # x64 artifact = exe + generated docs; win32 artifact = exe + its docs.
     Copy-Item (Join-Path $root 'dist/AutoHotkey64.exe') "$sim/dist/x64/" -Force
     Copy-Item (Join-Path $root 'dist/AutoHotkey32.exe') "$sim/dist/win32/" -Force
-    foreach ($d in 'BUILTIN_API.md', 'builtin-api.json', 'BUILTIN_HTTP_JSON.md',
+    foreach ($d in 'BUILTIN_API.md', 'builtin-api.json',
                    'debugging.md', 'v2-gotchas.md', 'README-AI.md') {
         Copy-Item (Join-Path $root "dist/$d") "$sim/dist/x64/" -Force
     }

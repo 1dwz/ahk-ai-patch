@@ -34,7 +34,7 @@
 param(
     [string] $Dist    = (Join-Path $PSScriptRoot '..\dist'),
     [string] $OutFile = (Join-Path $PSScriptRoot '..\dist\AHK-v2-Setup.exe'),
-    [string[]] $DocFiles = @('BUILTIN_API.md', 'builtin-api.json', 'BUILTIN_HTTP_JSON.md', 'v2-gotchas.md', 'debugging.md', 'README-AI.md'),
+    [string[]] $DocFiles = @('BUILTIN_API.md', 'builtin-api.json', 'v2-gotchas.md', 'debugging.md', 'README-AI.md'),
     [string[]] $ExtraDoc = @()   # resolved relative to $Dist; missing files warn, not fail
 )
 

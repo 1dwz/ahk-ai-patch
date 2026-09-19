@@ -17,9 +17,7 @@ matches the build, this proves the build describes itself.
   sMdFunc (MdFunc.cpp)         full argument and return types
 
 They do not overlap -- a function appears in exactly one -- so both are needed
-to describe the whole surface. See docs/BUILTIN_HTTP_JSON.md for the
-hand-written option reference for the functions this patch set adds, which no
-generated table can supply.
+to describe the whole surface.
 
 Usage:
   pwsh -NoProfile -File tools/gen-builtin-docs.ps1
@@ -32,7 +30,6 @@ param(
     [string]$OutDir,
     [string]$Markdown,
     [string]$Json,
-    [string]$GuideLink,
     [switch]$Quiet
 )
 
@@ -51,15 +48,6 @@ $Exe = (Resolve-Path $Exe).Path
 if (-not $OutDir) { $OutDir = Join-Path $RepoRoot 'docs\api' }
 if (-not $Markdown) { $Markdown = Join-Path $OutDir 'RUNTIME_API.md' }
 if (-not $Json) { $Json = Join-Path $OutDir 'builtin-api.json' }
-
-# Where to point readers for the hand-written HTTP/JSON guide, relative to
-# $Markdown.  Defaults to a sibling copy, which is what build.ps1 produces in
-# dist/; docs/api/ keeps the guide one level up.  Verified by the caller rather
-# than assumed, because a link to a file that is not there is worse than none.
-if (-not $GuideLink) {
-    $candidate = Join-Path (Split-Path -Parent $Markdown) 'BUILTIN_HTTP_JSON.md'
-    $GuideLink = if (Test-Path $candidate) { 'BUILTIN_HTTP_JSON.md' } else { '../BUILTIN_HTTP_JSON.md' }
-}
 
 # --- ask the interpreter ---------------------------------------------------
 # Invoke-AhkAi runs the process with a timeout and captures real stderr, which
@@ -117,36 +105,9 @@ if (-not $Quiet) {
     Write-Output "union       : $($allNames.Count) function(s)"
 }
 
-# --- extra parameter names for patch-added built-ins ----------------------
-# HttpRequest / JsonParse / JsonStringify are registered through BIF1(...) in
-# script.cpp, which records arity but no parameter names, and they are not in
-# lib/functions.h either. Their real signatures live in the implementation, so
-# they are spelled out here. Keep this in sync with the same table in
-# tools/extract-api-docs.ps1; the arity below is checked against g_BIF, so a
-# drift fails loudly instead of printing a wrong signature.
-$manualSignatures = @{
-    'HttpRequest'   = @{ Params = @('url', 'options');          Returns = 'Map' }
-    'JsonParse'     = @{ Params = @('text');                    Returns = 'Any' }
-    'JsonStringify' = @{ Params = @('value', 'indent');         Returns = 'String' }
-}
-
 # --- render ----------------------------------------------------------------
 function Get-Signature {
-    param([string]$Name, $Arity, $Typed, $Manual)
-    # A hand-written signature wins when there is one, because it carries real
-    # parameter names rather than types alone.
-    if ($Manual.Contains($Name)) {
-        $m = $Manual[$Name]
-        $a = $Arity[$Name]
-        $parts = @()
-        for ($i = 0; $i -lt $m.Params.Count; $i++) {
-            $n = $m.Params[$i]
-            if ($a -and $i -ge $a.Min) { $parts += "[, $n]" } else { $parts += $n }
-        }
-        $ret = if ($m.Returns) { "  -> $($m.Returns)" } else { '' }
-        if ($parts.Count -eq 0) { return "$Name()$ret" }
-        return "$Name(" + ($parts -join ', ') + ")$ret"
-    }
+    param([string]$Name, $Arity, $Typed)
     # Prefer the typed form: it names the argument types, which is what a
     # caller actually needs.  Fall back to the arity form otherwise.
     #
@@ -194,7 +155,7 @@ function Get-Signature {
 }
 
 function Get-Doc {
-    param($AllNames, $Arity, $Typed, $Manual, [string]$ExePath, [string]$GuideLink = 'BUILTIN_HTTP_JSON.md')
+    param($AllNames, $Arity, $Typed, [string]$ExePath)
 
     $sb = New-Object System.Text.StringBuilder
     [void]$sb.AppendLine('# Built-in API of this build')
@@ -217,30 +178,13 @@ function Get-Doc {
     [void]$sb.AppendLine('argument must be. `[, x]` marks an optional argument.')
     [void]$sb.AppendLine()
 
-    # A few functions deserve a pointer to the hand-written option reference,
-    # because their real surface is an options object that no signature table
-    # can express.
-    #
-    # The link is passed in ($GuideLink) rather than hard-coded, because the same
-    # document is written to different directories: build.ps1 copies the guide
-    # next to the output so a bare filename works in dist/, while docs/api/ has
-    # the guide one level up.  Hard-coding either form breaks the other.
-    $hasOptions = @($AllNames | Where-Object { $Manual.Contains($_) })
-    if ($hasOptions.Count) {
-        [void]$sb.AppendLine('> `HttpRequest`, `JsonParse` and `JsonStringify` are added by this patch')
-        [void]$sb.AppendLine('> set. Their signatures are listed below, but their behaviour and the')
-        [void]$sb.AppendLine('> `HttpRequest` options object are documented by hand in')
-        [void]$sb.AppendLine("> [$GuideLink]($GuideLink) -- read that before using them.")
-        [void]$sb.AppendLine()
-    }
-
     [void]$sb.AppendLine('## All functions')
     [void]$sb.AppendLine()
     [void]$sb.AppendLine('| Function | Signature | Source of truth |')
     [void]$sb.AppendLine('| --- | --- | --- |')
     foreach ($n in $AllNames) {
-        $sig = (Get-Signature -Name $n -Arity $Arity -Typed $Typed -Manual $Manual) -replace '\|', '\|'
-        $src = if ($Manual.Contains($n)) { 'declared in the patch' } elseif ($Typed.Contains($n)) { 'sMdFunc' } else { 'g_BIF' }
+        $sig = (Get-Signature -Name $n -Arity $Arity -Typed $Typed) -replace '\|', '\|'
+        $src = if ($Typed.Contains($n)) { 'sMdFunc' } else { 'g_BIF' }
         [void]$sb.AppendLine("| ``$n`` | ``$sig`` | $src |")
     }
     [void]$sb.AppendLine()
@@ -289,7 +233,7 @@ function Write-TextLf([string]$Path, [string]$Text) {
     [System.IO.File]::WriteAllText($Path, ($Text -replace "`r`n", "`n"), (New-Object System.Text.UTF8Encoding($false)))
 }
 
-$docText = Get-Doc -AllNames $allNames -Arity $arity -Typed $typed -Manual $manualSignatures -ExePath $Exe -GuideLink $GuideLink
+$docText = Get-Doc -AllNames $allNames -Arity $arity -Typed $typed -ExePath $Exe
 Write-TextLf $Markdown $docText
 
 $payload = [pscustomobject]@{
@@ -302,8 +246,8 @@ $payload = [pscustomobject]@{
         $n = $_
         [pscustomobject]@{
             name       = $n
-            registry   = if ($manualSignatures.Contains($n)) { 'patch' } elseif ($typed.Contains($n)) { 'sMdFunc' } else { 'g_BIF' }
-            signature  = Get-Signature -Name $n -Arity $arity -Typed $typed -Manual $manualSignatures
+            registry   = if ($typed.Contains($n)) { 'sMdFunc' } else { 'g_BIF' }
+            signature  = Get-Signature -Name $n -Arity $arity -Typed $typed
             arguments  = if ($typed.Contains($n)) { @($typed[$n]) } else { @() }
             min_params = if ($arity.Contains($n)) { $arity[$n].Min } else { $null }
             max_params = if ($arity.Contains($n)) { $arity[$n].Max } else { $null }

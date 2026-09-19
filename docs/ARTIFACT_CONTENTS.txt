@@ -12,12 +12,11 @@
 #
 # Everything listed must be produced by tools/build.ps1 -OutDir.  Nothing that
 # is loadable at runtime may appear here: no DLL, no CA bundle, no sidecar
-# config.  libcurl is linked into the executable, so cmd tests passing with only
-# the exe and a script present is the whole promise this file guards.
+# config.  cmd tests passing with only the exe and a script present is the whole
+# promise this file guards.
 AutoHotkey<arch>.exe
 BUILTIN_API.md
 builtin-api.json
-BUILTIN_HTTP_JSON.md
 debugging.md
 v2-gotchas.md
 README-AI.md

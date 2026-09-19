@@ -31,11 +31,9 @@ form produces an `Object`, so `{a: 1} is Map` is false and `Has()` is not
 available on it. Use `Map("a", 1)` when you want a Map.
 
 **Objects held in variables are a distinct code path from inline literals.**
-Only inline objects arrive as `SYM_OBJECT`; a variable yields `SYM_VAR`. Built-in
-functions in this build handle both, but if you write C++ built-ins, testing
-only the inline form will miss half the cases — this exact oversight caused a
-bug where `JsonStringify(JsonParse(...))` worked but `p := JsonParse(...)` then
-`JsonStringify(p)` returned `""`.
+Only inline objects arrive as `SYM_OBJECT`; a variable yields `SYM_VAR`. If you
+write C++ built-ins that accept objects, test both forms — an oversight here
+once produced working inline calls and empty results from a variable.
 
 **A plain `Object` is not enumerable.** Only `Map` and `Array` support
 `for k, v in obj` directly; a plain `Object` raises `Value not enumerable`.
@@ -47,15 +45,15 @@ for k, v in o.OwnProps()      ; correct
     out .= k "=" v
 ```
 
-This matters when feeding object literals to `JsonStringify`, which serializes
-`Map`, `Object` and `Array` alike — `{ a: 1 }` becomes `{"a":1}`. Nested
-containers of any mix of those three types all serialize correctly.
+This matters when feeding object literals to something that walks properties:
+`OwnProps()` sees `Map`, `Object` and `Array` alike, and nested containers of
+any mix of those three types all work.
 
 **Concatenating a Map or Array raises.** `out .= someMap` gives
-`Expected a String but got a Map`. Serialize explicitly:
+`Expected a String but got a Map`. Convert explicitly:
 
 ```ahk
-out .= JsonStringify(someMap)          ; correct
+out .= "" o.OwnProps().Count        ; property count, not the contents
 ```
 
 **`Map` needs index assignment.** `m.key := v` is silently ignored; only

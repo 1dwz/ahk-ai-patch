@@ -36,6 +36,11 @@ static class AhkSetup
     const string ProgId = "AutoHotkeyScript";
     const string AppId = "AHK-v2";
 
+    // Built-in function count of the patch set, as reported by /dump-api.  This
+    // patch set adds no built-ins, so the number matches stock AutoHotkey; the
+    // real identity check is that /dump-api exists at all.
+    const int ExpectedFunctions = 354;
+
     // Appended-payload trailer: magic, index offset, index length, blob offset.
     // The magic is 9 bytes ("AHKSETUP1"), so the three Int64s start at 9.
     static readonly byte[] Magic = Encoding.ASCII.GetBytes("AHKSETUP1");
@@ -409,15 +414,18 @@ static class AhkSetup
             int code = RunCapture(p, "/dump-api", 20000, out outp);
             int n = CountFunctions(outp);
 
-            if (code != 0 || n != 357)
+            // A stock interpreter does not implement /dump-api at all, so a
+            // zero exit code is itself the patch identity check; the count
+            // additionally proves the built-in registry came through intact.
+            if (code != 0 || n != ExpectedFunctions)
             {
-                Console.Error.WriteLine("  {0}: exit={1} functions={2} (expected 357) -- NOT the patched build",
-                    exe, code, n);
+                Console.Error.WriteLine("  {0}: exit={1} functions={2} (expected {3}) -- NOT the patched build",
+                    exe, code, n, ExpectedFunctions);
                 rc = 1;
             }
             else if (!quiet)
             {
-                Console.WriteLine("  {0}: 357 functions, ok", exe);
+                Console.WriteLine("  {0}: {1} functions, ok", exe, ExpectedFunctions);
             }
         }
 

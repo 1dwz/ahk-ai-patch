@@ -51,23 +51,38 @@ $LASTEXITCODE                        # 0 ok, 1 thread error, 2 load failure
 
 Use the association only when you specifically want to test what a user sees.
 
-### "On stderr" is not the same as "visible"
+### "Redirected" is not the same as "visible"
 
 `AutoHotkey.exe` is a Windows **GUI-subsystem** binary, not a console program.
 Started from a terminal without redirection it has no console attached, so
-diagnostics go nowhere and you see **nothing at all**. The build here calls
-`AttachConsole(ATTACH_PARENT_PROCESS)` so the text does appear in the terminal
-you launched it from.
+output goes nowhere and you see **nothing at all** -- while the process still
+exits 0, which makes it look like the program simply printed nothing.
+
+This bit **both** switches, not just one:
+
+- `/AI` exports diagnostics to stderr, and the build here calls
+  `AttachConsole(ATTACH_PARENT_PROCESS)` so the text does appear in the terminal
+  you launched it from.
+- `/dump-api` writes to **stdout** and is not routed through the diagnostics path
+  (`DumpBuiltinApi` runs before any script is loaded), so it needs its own
+  `AttachConsole`. Without it, piping worked and typing the command printed
+  nothing.
 
 Two consequences worth remembering:
 
 - If you see no output, check whether you actually have a console before
-  suspecting the script. `cmd /c "... 2>&1"` works because the redirection hands
-  over a real pipe handle, which can mask the problem entirely.
-- **A test that redirects stderr proves the bytes exist, not that anyone can see
-  them.** `Invoke-AhkAi` and every `2>&1` capture fall in this category. To
-  verify visibility, run under a real console
-  (`ahk-patch\tools\test-console-visibility.ps1`).
+  suspecting the script. `cmd /c "... 2>&1"`, `| Out-String` and `> file` all
+  work because the redirection hands over a real pipe handle -- which can mask
+  the problem entirely.
+- **A test that redirects proves the bytes exist, not that anyone can see
+  them.** `Invoke-AhkAi` and every `2>&1` capture fall in this category, and that
+  is exactly why `/dump-api` shipped broken: every automated check piped it. To
+  verify visibility you must own a console. The harnesses are
+  `tools\test-console-visibility.ps1` (stderr) and
+  `tools\test-dump-api-console.ps1` (stdout); both launch the subject under a
+  console they allocate and read the screen buffer back, and both self-check the
+  read-back with a sentinel so "nothing printed" cannot be mistaken for "the
+  reader is broken".
 
 ## Running a script safely
 
@@ -186,11 +201,11 @@ try {
 }
 
 ; 3. What did a value actually come back as?
-x := JsonParse(text)
+x := StrSplit(text, ",")
 FileAppend "type of x = " Type(x) "`n", "*"
 
-; 4. What is in that object? (stringify it — do not concatenate it)
-FileAppend "x = " JsonStringify(x) "`n", "*"
+; 4. How many elements did it end up with?
+FileAppend "x.Length = " x.Length "`n", "*"
 ```
 
 `FileAppend(..., "*")` writes to stdout and `FileAppend(..., "**")` to stderr,
@@ -200,7 +215,7 @@ before delivering.
 Two mistakes that produce very confusing errors, so check for them early:
 
 - **Concatenating an object into a string.** `out .= someMap` raises
-  `Expected a String but got a Map`. Use `JsonStringify(someMap)`.
+  `Expected a String but got a Map`. Walk it with `OwnProps()` instead.
 - **Setting a Map with dot syntax.** `m.key := v` is silently ignored; only
   `m[key] := v` works. The read-back then returns nothing, which looks like the
   value was lost somewhere else.

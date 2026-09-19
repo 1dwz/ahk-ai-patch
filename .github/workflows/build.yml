@@ -16,10 +16,6 @@ permissions:
   contents: write
 
 env:
-  # The libcurl that third_party/curl-static was built from. The build step
-  # asserts the committed .lib matches this, so a stale import library can
-  # never be linked in silently.
-  CURL_VERSION: '8.22.0'
   # Keep in sync with the submodule pin; can be overridden per-run.
   UPSTREAM_REF: ${{ github.event.inputs.upstream_ref }}
 
@@ -48,29 +44,6 @@ jobs:
       - name: Apply patch series (check only)
         shell: pwsh
         run: pwsh -NoProfile -File tools/apply-patches.ps1 -CheckOnly
-
-      # libcurl is linked statically, so the build needs the committed import
-      # libraries. Catch a missing/corrupt one here rather than 40 minutes into
-      # a build, and record the hash so a release can be traced to its inputs.
-      - name: Verify static libcurl is present
-        shell: pwsh
-        run: |
-          $libs = @(
-            'third_party/curl-static/lib-x64/libcurl.lib',
-            'third_party/curl-static/lib-x86/libcurl.lib',
-            'third_party/curl-static/include/curl/curl.h'
-          )
-          $missing = @($libs | Where-Object { -not (Test-Path $_) })
-          if ($missing) {
-            Write-Output '::error::static libcurl inputs are missing:'
-            $missing | ForEach-Object { Write-Output "  $_" }
-            Write-Output 'Regenerate them with tools/build-libcurl-static.ps1 -Platform both'
-            exit 1
-          }
-          $libs | ForEach-Object {
-            $h = (Get-FileHash $_ -Algorithm SHA256).Hash
-            Write-Output ("{0}  {1}  {2:N0} B" -f $h, $_, (Get-Item $_).Length)
-          }
 
   build:
     needs: patch-check
@@ -108,19 +81,6 @@ jobs:
       - name: Report applied diff
         shell: pwsh
         run: git -C upstream diff --stat
-
-      # libcurl is linked statically from third_party/curl-static (committed), so
-      # there is no DLL to ship and no separate libcurl build step.
-      - name: Verify static libcurl is present
-        shell: pwsh
-        run: |
-          $bits = if ('${{ matrix.platform }}' -eq 'x64') { 'lib-x64' } else { 'lib-x86' }
-          $lib = "third_party/curl-static/$bits/libcurl.lib"
-          if (-not (Test-Path $lib)) {
-            Write-Output "::error::$lib is missing; run tools/build-libcurl-static.ps1 -Platform both"
-            exit 1
-          }
-          Write-Output ("{0}: {1:N0} bytes" -f $lib, (Get-Item $lib).Length)
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
@@ -169,16 +129,15 @@ jobs:
         shell: pwsh
         run: Get-ChildItem -Recurse dist | Select-Object FullName, Length
 
-      # The whole point of the static link: one executable and nothing it has
-      # to load beside it.  The generated API docs and the hand-written HTTP/JSON
-      # guide are deliberately allowed through -- they ship with the binary so a
-      # downloader can read the function list and the option reference -- but a
-      # DLL of any name, or anything else, means self-containment is broken.
+      # The whole point of the build: one executable and nothing it has to load
+      # beside it.  The generated API docs ship with the binary so a downloader
+      # can read the function list -- but a DLL of any name, or anything else,
+      # means self-containment is broken.
       #
       # The expected payload is listed once, in docs/ARTIFACT_CONTENTS.txt, and
       # read by both this check and tools/build.ps1.  Keeping a second copy here
-      # already caused a red run: when the guide was added to dist/, this list
-      # did not know about it.
+      # already caused a red run once, when a new doc was added to dist/ and
+      # this list did not know about it.
       - name: Assert the artifact holds no loadable dependency
         shell: pwsh
         run: |
@@ -215,13 +174,7 @@ jobs:
             Write-Output "::error::a DLL shipped beside the exe: $($dlls.Name -join ', ')"
             exit 1
           }
-          $ascii = [System.Text.Encoding]::ASCII.GetString(
-            [System.IO.File]::ReadAllBytes((Resolve-Path 'dist/AutoHotkey64.exe')))
-          if ($ascii -match 'libcurl[^"'']*\.dll') {
-            Write-Output "::error::exe still imports $($Matches[0]); the static link did not take"
-            exit 1
-          }
-          Write-Output 'OK: artifact payload matches the manifest, no DLL, no libcurl import'
+          Write-Output 'OK: artifact payload matches the manifest, no DLL shipped'
           Write-Output ("size: {0:N0} bytes" -f (Get-Item 'dist/AutoHotkey64.exe').Length)
 
       - name: Run non-interactive smoke tests
@@ -237,19 +190,13 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File tools/test-console-visibility.ps1 -Exe dist/AutoHotkey64.exe
 
-      # The hand-written HTTP/JSON guide ships in the artifact, so its claims are
-      # part of what a downloading user relies on.  Nothing else validates them:
-      # the generated index only lists signatures for upstream functions.
-      - name: Assert the shipped guide matches the built interpreter
-        shell: pwsh
-        run: pwsh -NoProfile -File tools/test-doc-claims.ps1 -Exe dist/AutoHotkey64.exe
-
       # /dump-api is what the documentation generator reads, so a regression in
-      # it silently produces wrong docs.  Assert the registry counts, the
-      # patched functions, and that the expected arity is reported.
+      # it silently produces wrong docs.  Assert the registry counts and the
+      # well-known size of the built-in set.
       - name: Assert /dump-api reports the full built-in API
         shell: pwsh
         run: |
+          $expected = 354
           $out = & dist/AutoHotkey64.exe /dump-api 2>&1 | Out-String
           if ($LASTEXITCODE -ne 0) {
             Write-Output "::error::/dump-api exited $LASTEXITCODE"
@@ -260,36 +207,40 @@ jobs:
           $unique = @($names | Sort-Object -Unique)
           Write-Output "functions: $($unique.Count)"
 
-          if ($unique.Count -ne 357) {
-            Write-Output "::error::expected 357 built-in functions, got $($unique.Count)"
+          if ($unique.Count -ne $expected) {
+            Write-Output "::error::expected $expected built-in functions, got $($unique.Count)"
             exit 1
           }
-          foreach ($fn in 'HttpRequest', 'JsonParse', 'JsonStringify') {
-            if ($unique -notcontains $fn) {
-              Write-Output "::error::$fn missing from /dump-api; the patch did not apply"
-              exit 1
-            }
-          }
-          # In this section the trailing 'max' field is empty for the
-          # BIF1-registered entries, and 'variadic'/'outputs' may be absent,
-          # so only the name and the min column are asserted here.  Exact
-          # arity for the patched functions is cross-checked locally by
-          # tools/extract-api-docs.ps1 -Verify against the running
-          # interpreter, which reads g_BIF rather than this text format.
-          foreach ($fn in 'HttpRequest', 'JsonParse', 'JsonStringify') {
-            if ($out -notmatch "(?m)^$fn`t1`t") {
-              Write-Output "::error::$fn is not reported with min arity 1"
-              exit 1
-            }
-          }
-          Write-Output 'OK: 357 functions, HttpRequest/JsonParse/JsonStringify present with min arity 1'
+          Write-Output "OK: /dump-api reports $expected functions"
 
-      # The JSON suite is fully offline, so it always runs. The HTTP suite
-      # needs a live network and would make CI flaky, so it is skipped here and
-      # is meant to be run locally (see README).
-      - name: Run JSON suite (offline)
+      # The check above pipes /dump-api, which hands it a real stdout handle --
+      # so it cannot see that typing the command prints nothing.  /dump-api and
+      # /AI share that blind spot (AutoHotkey.exe is a GUI-subsystem binary and
+      # does not inherit an interactive console), and it was a real bug in both.
+      - name: Assert /dump-api output reaches a bare console
         shell: pwsh
-        run: pwsh -NoProfile -File tools/test-json-http.ps1 -Exe dist/AutoHotkey64.exe -SkipHttp
+        run: pwsh -NoProfile -File tools/test-dump-api-console.ps1 -Exe dist/AutoHotkey64.exe
+
+      # The goal is "/AI only, as close to upstream as possible", so the strongest
+      # available claim is that an ORDINARY invocation is byte-identical to
+      # stock.  That needs a pristine binary from the same pinned commit, built
+      # here and compared against the artifact under test.
+      - name: Build the pristine control from the same pin
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'pristine.zip'
+          git -C upstream archive --format=zip -o $zip HEAD
+          Expand-Archive -Path $zip -DestinationPath pristine-test -Force
+          pwsh -NoProfile -File tools/build.ps1 -UpstreamDir pristine-test `
+               -Configuration Release -Platform x64 -OutDir pristine-dist
+
+      - name: Assert behaviour is unchanged outside the new switches
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File tools/test-parity.ps1 `
+            -Patched dist/AutoHotkey64.exe `
+            -Pristine pristine-dist/AutoHotkey64.exe `
+            -PristineSource pristine-test
 
   # The installer needs both architectures in one directory and writes to
   # Program Files and HKLM, so it gets its own job that runs elevated (the

@@ -1950,19 +1950,6 @@ min params: 1, max params: 3; returns: `Variant`.
 | `Replacement` | In_Opt | `Variant` | yes |
 | `OnOffToggle` | In_Opt | `String` | yes |
 
-### HttpRequest
-
-```ahk
-HttpRequest(url, [, options])  -> Map
-```
-
-min params: 1, max params: 2; returns: `Map`.
-
-| Param | Direction | Type | Optional |
-| --- | --- | --- | --- |
-| `url` | In |  |  |
-| `options` | In_Opt |  | yes |
-
 ## I
 
 ### IL_Add
@@ -2288,33 +2275,6 @@ min params: 1, max params: 1.
 Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
 ``functions.h``, so its parameter names are not available from source.
 See the hand-written notes in the repository ``docs/`` for its options.
-
-## J
-
-### JsonParse
-
-```ahk
-JsonParse(text)  -> Any
-```
-
-min params: 1, max params: 1; returns: `Any`.
-
-| Param | Direction | Type | Optional |
-| --- | --- | --- | --- |
-| `text` | In |  |  |
-
-### JsonStringify
-
-```ahk
-JsonStringify(value, [, indent])  -> String
-```
-
-min params: 1, max params: 2; returns: `String`.
-
-| Param | Direction | Type | Optional |
-| --- | --- | --- | --- |
-| `value` | In |  |  |
-| `indent` | In_Opt |  | yes |
 
 ## K
 

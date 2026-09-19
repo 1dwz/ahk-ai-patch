@@ -90,8 +90,8 @@ $installPlan = @(
 )
 
 # The 32-bit interpreter must be patched too.  Installing only x64 leaves any
-# 32-bit script on the stock binary, silently without /AI and without the
-# built-in HTTP/JSON -- which is exactly how it was missed the first time.
+# 32-bit script on the stock binary, silently without /AI -- which is exactly
+# how it was missed the first time.
 if (Test-Path $Source32) {
     $src32 = (Resolve-Path $Source32).Path
     Write-Output "candidate : $src32"
@@ -103,7 +103,7 @@ if (Test-Path $Source32) {
         Write-Warning "32-bit candidate is NOT the /AI build ($($v32.Why)); leaving AutoHotkey32.exe alone."
     }
 } else {
-    Write-Warning "no 32-bit build at $Source32; AutoHotkey32.exe will stay stock (no /AI, no HTTP/JSON in 32-bit scripts)."
+    Write-Warning "no 32-bit build at $Source32; AutoHotkey32.exe will stay stock (no /AI in 32-bit scripts)."
 }
 
 foreach ($step in $installPlan) {
