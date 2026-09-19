@@ -192,6 +192,46 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File tools/test-noninteractive.ps1 -Exe dist/AutoHotkey64.exe
 
+      # /dump-api is what the documentation generator reads, so a regression in
+      # it silently produces wrong docs.  Assert the registry counts, the
+      # patched functions, and that the expected arity is reported.
+      - name: Assert /dump-api reports the full built-in API
+        shell: pwsh
+        run: |
+          $out = & dist/AutoHotkey64.exe /dump-api 2>&1 | Out-String
+          if ($LASTEXITCODE -ne 0) {
+            Write-Output "::error::/dump-api exited $LASTEXITCODE"
+            exit 1
+          }
+          $names = [regex]::Matches($out, '(?m)^([A-Za-z_][A-Za-z0-9_]*)\t') |
+            ForEach-Object { $_.Groups[1].Value }
+          $unique = @($names | Sort-Object -Unique)
+          Write-Output "functions: $($unique.Count)"
+
+          if ($unique.Count -ne 357) {
+            Write-Output "::error::expected 357 built-in functions, got $($unique.Count)"
+            exit 1
+          }
+          foreach ($fn in 'HttpRequest', 'JsonParse', 'JsonStringify') {
+            if ($unique -notcontains $fn) {
+              Write-Output "::error::$fn missing from /dump-api; the patch did not apply"
+              exit 1
+            }
+          }
+          # In this section the trailing 'max' field is empty for the
+          # BIF1-registered entries, and 'variadic'/'outputs' may be absent,
+          # so only the name and the min column are asserted here.  Exact
+          # arity for the patched functions is cross-checked locally by
+          # tools/extract-api-docs.ps1 -Verify against the running
+          # interpreter, which reads g_BIF rather than this text format.
+          foreach ($fn in 'HttpRequest', 'JsonParse', 'JsonStringify') {
+            if ($out -notmatch "(?m)^$fn`t1`t") {
+              Write-Output "::error::$fn is not reported with min arity 1"
+              exit 1
+            }
+          }
+          Write-Output 'OK: 357 functions, HttpRequest/JsonParse/JsonStringify present with min arity 1'
+
       # The JSON suite is fully offline, so it always runs. The HTTP suite
       # needs a live network and would make CI flaky, so it is skipped here and
       # is meant to be run locally (see README).
