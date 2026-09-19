@@ -14,6 +14,7 @@ Requires an elevated shell (writes under C:\Program Files).
 param(
     [string]$RepoRoot  = (Split-Path -Parent $PSScriptRoot),
     [string]$Source,
+    [string]$Source32,
     [string]$TargetDir = 'C:\Program Files\AutoHotkey\v2',
     [string]$BackupDir,
     [switch]$Revert,
@@ -24,6 +25,7 @@ $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AhkAi.psm1') -Force
 
 if (-not $Source)    { $Source    = Join-Path $RepoRoot 'dist\AutoHotkey64.exe' }
+if (-not $Source32)  { $Source32  = Join-Path $RepoRoot 'dist\AutoHotkey32.exe' }
 if (-not $BackupDir) { $BackupDir = Join-Path $RepoRoot 'backup-stock' }
 
 # --- probe helper: does a given exe honour /AI? ---------------------------
@@ -80,26 +82,63 @@ foreach ($n in 'AutoHotkey64.exe','AutoHotkey.exe','AutoHotkey32.exe','AutoHotke
 }
 
 # --- install --------------------------------------------------------------
-foreach ($n in 'AutoHotkey64.exe','AutoHotkey.exe') {
-    $dest = Join-Path $TargetDir $n
+# AutoHotkey.exe is a copy of the 64-bit build (that is how the stock install
+# lays it out; it is a symlink in some versions).
+$installPlan = @(
+    @{ From = $src;   To = 'AutoHotkey64.exe' }
+    @{ From = $src;   To = 'AutoHotkey.exe' }
+)
+
+# The 32-bit interpreter must be patched too.  Installing only x64 leaves any
+# 32-bit script on the stock binary, silently without /AI and without the
+# built-in HTTP/JSON -- which is exactly how it was missed the first time.
+if (Test-Path $Source32) {
+    $src32 = (Resolve-Path $Source32).Path
+    Write-Output "candidate : $src32"
+    $v32 = Test-AiBuild $src32
+    if ($v32.Ok) {
+        Write-Output ("verified  : /AI honoured (exit={0})" -f $v32.Exit)
+        $installPlan += @{ From = $src32; To = 'AutoHotkey32.exe' }
+    } else {
+        Write-Warning "32-bit candidate is NOT the /AI build ($($v32.Why)); leaving AutoHotkey32.exe alone."
+    }
+} else {
+    Write-Warning "no 32-bit build at $Source32; AutoHotkey32.exe will stay stock (no /AI, no HTTP/JSON in 32-bit scripts)."
+}
+
+foreach ($step in $installPlan) {
+    $dest = Join-Path $TargetDir $step.To
     try {
-        Copy-Item $src $dest -Force
+        Copy-Item $step.From $dest -Force
         Write-Output ("installed : {0}" -f $dest)
     } catch {
         Write-Warning ("could not replace {0}: {1}" -f $dest, $_.Exception.Message)
     }
 }
 
-# --- verify the installed copy -------------------------------------------
+# --- verify the installed copies ------------------------------------------
 Write-Output ''
-$vi = Test-AiBuild (Join-Path $TargetDir 'AutoHotkey64.exe')
-if ($vi.Ok) {
-    Write-Output ("OK  system interpreter honours /AI (exit={0})" -f $vi.Exit)
-    Write-Output ("    {0}" -f $vi.First)
+$allOk = $true
+foreach ($n in 'AutoHotkey64.exe', 'AutoHotkey32.exe') {
+    $p = Join-Path $TargetDir $n
+    if (-not (Test-Path $p)) { continue }
+    $one = Test-AiBuild $p
+    if ($one.Ok) {
+        Write-Output ("OK  {0} honours /AI (exit={1})" -f $n, $one.Exit)
+        Write-Output ("    {0}" -f $one.First)
+    } else {
+        # Not fatal for the 32-bit binary if it was deliberately left stock, but
+        # it must be visible: the silent version of this was the original bug.
+        Write-Warning ("{0} does NOT honour /AI ({1})" -f $n, $one.Why)
+        if ($n -eq 'AutoHotkey64.exe') { $allOk = $false }
+    }
+}
+
+if ($allOk) {
     Write-Output ''
     Write-Output ("backup : {0}" -f $BackupDir)
     Write-Output ("revert : pwsh -NoProfile -File tools/install-patched.ps1 -Revert")
 } else {
-    Write-Error "installed interpreter did NOT honour /AI ($($vi.Why)). Restore with -Revert."
+    Write-Error "installed x64 interpreter did NOT honour /AI. Restore with -Revert."
     exit 1
 }
