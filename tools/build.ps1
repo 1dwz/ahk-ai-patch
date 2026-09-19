@@ -130,6 +130,24 @@ if (Test-Path $built) {
         } else {
             Write-Output 'Static  : no libcurl DLL import (linked in)'
         }
+
+        # Generate the built-in API reference next to the binary, straight out
+        # of the build we just produced.  Doing it here means the docs can
+        # never describe a different build than the one shipped, and it works
+        # for a consumer who only downloads the artifact.
+        $gen = Join-Path $RepoRoot 'tools\gen-builtin-docs.ps1'
+        if (Test-Path $gen) {
+            try {
+                & $gen -RepoRoot $RepoRoot -Exe (Join-Path $OutDir $exeName) `
+                    -Markdown (Join-Path $OutDir 'BUILTIN_API.md') `
+                    -Json (Join-Path $OutDir 'builtin-api.json') -Quiet
+                Write-Output "Docs    : BUILTIN_API.md + builtin-api.json ($LASTEXITCODE)"
+            } catch {
+                # Documentation must never fail a build; the binary is the
+                # deliverable and this is a derived artifact.
+                Write-Warning "could not generate the API reference: $($_.Exception.Message)"
+            }
+        }
     }
 } else {
     Write-Warning "Build reported success but $built is missing."

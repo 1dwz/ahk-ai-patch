@@ -1,9 +1,9 @@
 diff --git a/source/lib/json_builtin.cpp b/source/lib/json_builtin.cpp
 new file mode 100644
-index 00000000..cd33a4e4
+index 00000000..f4cf9c99
 --- /dev/null
 +++ b/source/lib/json_builtin.cpp
-@@ -0,0 +1,578 @@
+@@ -0,0 +1,617 @@
 +/*#########################################################################
 +# AHK-AI patch: built-in JSON support
 +#
@@ -384,7 +384,7 @@ index 00000000..cd33a4e4
 +		// testing symbol == SYM_OBJECT directly silently mishandles variables.
 +		if (IObject *obj = TokenToObject(aValue))
 +		{
-+			// Serialize only the two container types with a JSON equivalent.
++			// Serialize the container types that have a JSON equivalent.
 +			// Anything else (a Class, a COM object, ...) becomes a string.
 +			if (obj->IsOfType(Array::sPrototype))
 +			{
@@ -394,6 +394,14 @@ index 00000000..cd33a4e4
 +			if (obj->IsOfType(Map::sPrototype))
 +			{
 +				WriteMap(static_cast<Map *>(obj));
++				return;
++			}
++			// A plain Object ({ Key: value }) has a JSON equivalent too; it just
++			// needs OwnProps() to be enumerable.  Without this case every object
++			// literal silently serialized as "".
++			if (obj->IsOfType(Object::sPrototype))
++			{
++				WriteObjectProps(obj);
 +				return;
 +			}
 +			WriteQuoted(TokenToString(aValue));
@@ -516,48 +524,79 @@ index 00000000..cd33a4e4
 +		Put(']');
 +	}
 +
++	// A plain Object ({ Key: value }) has no __Enum, so it is not directly
++	// enumerable; OwnProps() is what produces a key/value enumerator for it.
++	// Invoke OwnProps first and enumerate the IndexEnumerator it returns.
++	// Map is enumerable directly and its item accessors are private, so the
++	// two cases need different entry points.
++	void WriteObjectProps(IObject *aObject)
++	{
++		FuncResult invoke_result;
++		ExprTokenType self_token(aObject);
++		auto invoke_ret = aObject->Invoke(invoke_result, IT_CALL | IF_BYPASS_METAFUNC,
++			_T("OwnProps"), self_token, nullptr, 0);
++		IObject *enumerator = (invoke_ret == OK) ? TokenToObject(invoke_result) : nullptr;
++		if (!enumerator)
++		{
++			Put('{');
++			Put('}');
++			return;
++		}
++		// The enumerator holds the only live reference to the returned object,
++		// so it is released rather than the token being freed (matching how
++		// GetEnumerator treats its own Invoke result).
++		WriteKeyValueList(enumerator);
++		enumerator->Release();
++	}
++
++	// Map is enumerable as-is, so GetEnumerator yields the Map itself.
 +	void WriteMap(Map *m)
++	{
++		ExprTokenType enum_token(static_cast<IObject *>(m));
++		IObject *enumerator = nullptr;
++		if (GetEnumerator(enumerator, enum_token, 2, false) != OK || !enumerator)
++		{
++			Put('{');
++			Put('}');
++			return;
++		}
++		WriteKeyValueList(enumerator);
++		enumerator->Release();
++	}
++
++	void WriteKeyValueList(IObject *aEnumerator)
 +	{
 +		Put('{');
 +		++mLevel;
 +		bool first = true;
 +
-+		// Map's item accessors are private, so enumerate through the same
-+		// public path the language itself uses: GetEnumerator +
-+		// CallEnumerator with two VarRef out-parameters (key, value).
 +		// The token must stay alive for the duration of the call, so it is a
 +		// named local rather than a temporary.
-+		ExprTokenType enumToken(static_cast<IObject *>(m));
-+		IObject *enumerator = nullptr;
-+		if (GetEnumerator(enumerator, enumToken, 2, false) == OK && enumerator)
++		auto vkey = new VarRef(), vval = new VarRef();
++		ExprTokenType tparam[] = { vkey, vval };
++		ExprTokenType *param[] = { &tparam[0], &tparam[1] };
++		for (;;)
 +		{
-+			auto vkey = new VarRef(), vval = new VarRef();
-+			ExprTokenType tparam[] = { vkey, vval };
-+			ExprTokenType *param[] = { &tparam[0], &tparam[1] };
-+			for (;;)
-+			{
-+				if (CallEnumerator(enumerator, param, 2, false) != CONDITION_TRUE)
-+					break;
-+				if (!first) Put(',');
-+				first = false;
-+				Newline();
++			if (CallEnumerator(aEnumerator, param, 2, false) != CONDITION_TRUE)
++				break;
++			if (!first) Put(',');
++			first = false;
++			Newline();
 +
-+				ExprTokenType kt;
-+				vkey->ToTokenSkipAddRef(kt);
-+				WriteQuoted(TokenToString(kt));
++			ExprTokenType kt;
++			vkey->ToTokenSkipAddRef(kt);
++			WriteQuoted(TokenToString(kt));
 +
-+				Put(':');
-+				if (mIndent > 0) Put(' ');
++			Put(':');
++			if (mIndent > 0) Put(' ');
 +
-+				ExprTokenType vt;
-+				vval->ToTokenSkipAddRef(vt);
-+				Write(vt);
-+			}
-+			// Same teardown the debugger uses for its own enumeration.
-+			vkey->Release();
-+			vval->Release();
-+			enumerator->Release();
++			ExprTokenType vt;
++			vval->ToTokenSkipAddRef(vt);
++			Write(vt);
 +		}
++		// Same teardown the debugger uses for its own enumeration.
++		vkey->Release();
++		vval->Release();
 +
 +		--mLevel;
 +		if (!first) Newline();

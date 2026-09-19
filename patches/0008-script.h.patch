@@ -1,0 +1,70 @@
+diff --git a/source/script.h b/source/script.h
+index b34d5a39..0814f750 100644
+--- a/source/script.h
++++ b/source/script.h
+@@ -1792,6 +1792,18 @@ struct FuncEntry
+ 	UCHAR mOutputVars[MAX_FUNC_OUTPUT_VAR];
+ };
+ 
++// ahk-ai patch: a flattened view of one g_BIF row, for /dump-api. It exists so
++// callers outside script.cpp can read the table without depending on the
++// BIF1/BIFn macro layout or on FuncEntry's internals.
++struct BuiltinApiFunc
++{
++	LPCTSTR name;
++	int minParams;
++	bool variadic;      // mMaxParams == MAX_FUNCTION_PARAMS
++	int outputCount;
++	UCHAR outputs[MAX_FUNC_OUTPUT_VAR];
++};
++
+ 
+ class DECLSPEC_NOVTABLE EnumBase : public Func
+ {
+@@ -2282,10 +2294,15 @@ public:
+ 	bool mAutoExecSectionIsRunning;
+ 	bool mIsRestart; // The app is restarting rather than starting from scratch.
+ 	bool mErrorStdOut; // true if load-time syntax errors should be sent to stdout vs. a MsgBox.
++	bool mNonInteractive; // true when dialogs/windows must never be used for diagnostics or startup errors.
++	bool mNonInteractiveErrorSeen; // true once a non-interactive diagnostic of FAIL/CRITICAL severity was emitted.
+ 	UINT mErrorStdOutCP;
+ 	void SetErrorStdOut(LPTSTR aParam);
++	void SetNonInteractive(bool aEnable = true) { mNonInteractive = aEnable; }
++	void PrintDiagnostic(LPCTSTR aErrorText, LPCTSTR aExtraInfo = _T(""), ResultType aErrorType = FAIL, Line *aLine = nullptr, Object *aException = nullptr);
+ 	void PrintErrorStdOut(LPCTSTR aErrorText, int aLength = 0, LPCTSTR aFile = _T("*"));
+ 	void PrintErrorStdOut(LPCTSTR aErrorText, LPCTSTR aExtraInfo, FileIndexType aFileIndex, LineNumberType aLineNumber);
++	void WriteDiagnosticRaw(LPCTSTR aText, int aLength); // Writes straight to the stderr handle.
+ #ifndef AUTOHOTKEYSC
+ 	bool mValidateThenExit;
+ 	LPTSTR mCmdLineInclude;
+@@ -2363,6 +2380,20 @@ public:
+ 	IObject *GetBuiltinObject(LPCTSTR aName);
+ 	static Func *GetBuiltInFunc(LPCTSTR aFuncName);
+ 	static Func *GetBuiltInMdFunc(LPCTSTR aFuncName);
++	// ahk-ai patch: read-only access to the built-in function table, so that
++	// /dump-api (handled in AutoHotkey.cpp, where g_BIF is out of scope
++	// because it is file-local to script.cpp) can report what this build
++	// actually provides.
++	static int BuiltinApiCount();
++	static const BuiltinApiFunc &BuiltinApiAt(int aIndex);
++	// ahk-ai patch: the typed registry from MdFunc.cpp (lib/functions.h).  It
++	// carries full argument types, which g_BIF does not, so /dump-api reports
++	// both tables.  MdType is passed as int here rather than by name, because
++	// MdType.h is a separate header and MdFunc.h includes script.h; taking the
++	// enum by value through int keeps this header free of that dependency.
++	static int MdFuncApiCount();
++	static LPCTSTR MdFuncApiAt(int aIndex, int &aArgCount, int *&aArgTypes, int &aRetType);
++	static LPCTSTR MdTypeToString(int aType);
+ 	UserFunc *AddFunc(LPCTSTR aFuncName, size_t aFuncNameLength, FuncDefType aIsInExpression = FuncDefNormal, Object *aClassObject = nullptr);
+ 	Var *AddFuncVar(UserFunc *aFunc);
+ 	UserFunc *AddFuncToList(UserFunc *aFunc);
+@@ -2612,6 +2643,9 @@ BIF_DECL(BIF_Ord);
+ BIF_DECL(BIF_Chr);
+ BIF_DECL(BIF_Format);
+ BIF_DECL(BIF_FormatTime);
++BIF_DECL(BIF_HttpRequest);      // ahk-ai patch: built-in HTTP (libcurl)
++BIF_DECL(BIF_JsonParse);        // ahk-ai patch: built-in JSON
++BIF_DECL(BIF_JsonStringify);    // ahk-ai patch: built-in JSON
+ BIF_DECL(BIF_NumGet);
+ BIF_DECL(BIF_NumPut);
+ BIF_DECL(BIF_StrGetPut);

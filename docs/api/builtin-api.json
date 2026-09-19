@@ -1,0 +1,4693 @@
+{
+  "generated_by": "/dump-api",
+  "interpreter": "C:\\ProgramData\\Autohotkey\\ahk-patch\\dist\\AutoHotkey64.exe",
+  "count": 357,
+  "g_bif_count": 104,
+  "s_mdfunc_count": 253,
+  "functions": [
+    {
+      "name": "Abs",
+      "registry": "g_BIF",
+      "signature": "Abs(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ACos",
+      "registry": "g_BIF",
+      "signature": "ACos(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ASin",
+      "registry": "g_BIF",
+      "signature": "ASin(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ATan",
+      "registry": "g_BIF",
+      "signature": "ATan(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ATan2",
+      "registry": "g_BIF",
+      "signature": "ATan2(arg1, arg2)",
+      "arguments": null,
+      "min_params": 2,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "BlockInput",
+      "registry": "sMdFunc",
+      "signature": "BlockInput(String)",
+      "arguments": "String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "CallbackCreate",
+      "registry": "sMdFunc",
+      "signature": "CallbackCreate(Object, [, String], [, Variant])  -> MdType(8)",
+      "arguments": [
+        "Object",
+        "Opt String",
+        "Opt Variant",
+        "Out_Ret MdType(8)"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "CallbackFree",
+      "registry": "sMdFunc",
+      "signature": "CallbackFree(MdType(8))",
+      "arguments": "MdType(8)",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "CaretGetPos",
+      "registry": "sMdFunc",
+      "signature": "CaretGetPos([, Variant], [, Variant])",
+      "arguments": [
+        "Out_Opt Variant",
+        "Out_Opt Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Ceil",
+      "registry": "g_BIF",
+      "signature": "Ceil(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Chr",
+      "registry": "g_BIF",
+      "signature": "Chr(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Click",
+      "registry": "g_BIF",
+      "signature": "Click()",
+      "arguments": null,
+      "min_params": 0,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ClipWait",
+      "registry": "sMdFunc",
+      "signature": "ClipWait([, Float64], [, Int32])  -> Bool32",
+      "arguments": [
+        "Opt Float64",
+        "Opt Int32",
+        "Out_Ret Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ComCall",
+      "registry": "g_BIF",
+      "signature": "ComCall(arg1, arg2, ...)",
+      "arguments": null,
+      "min_params": 2,
+      "max_params": null,
+      "variadic": true,
+      "outputs": null
+    },
+    {
+      "name": "ComObjActive",
+      "registry": "g_BIF",
+      "signature": "ComObjActive(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ComObjConnect",
+      "registry": "g_BIF",
+      "signature": "ComObjConnect(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ComObjFlags",
+      "registry": "g_BIF",
+      "signature": "ComObjFlags(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ComObjFromPtr",
+      "registry": "g_BIF",
+      "signature": "ComObjFromPtr(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ComObjGet",
+      "registry": "g_BIF",
+      "signature": "ComObjGet(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ComObjQuery",
+      "registry": "g_BIF",
+      "signature": "ComObjQuery(arg1, arg2)",
+      "arguments": null,
+      "min_params": 2,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ComObjType",
+      "registry": "g_BIF",
+      "signature": "ComObjType(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ComObjValue",
+      "registry": "g_BIF",
+      "signature": "ComObjValue(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlAddItem",
+      "registry": "sMdFunc",
+      "signature": "ControlAddItem(String, Variant, [, Variant], [, String], [, String], [, String])  -> IntPtr",
+      "arguments": [
+        "String",
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret IntPtr"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlChooseIndex",
+      "registry": "sMdFunc",
+      "signature": "ControlChooseIndex(IntPtr, Variant, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "IntPtr",
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlChooseString",
+      "registry": "sMdFunc",
+      "signature": "ControlChooseString(String, Variant, [, Variant], [, String], [, String], [, String])  -> IntPtr",
+      "arguments": [
+        "String",
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret IntPtr"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlClick",
+      "registry": "sMdFunc",
+      "signature": "ControlClick([, Variant], [, Variant], [, String], [, String], [, Int32], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt Int32",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlDeleteItem",
+      "registry": "sMdFunc",
+      "signature": "ControlDeleteItem(IntPtr, Variant, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "IntPtr",
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlFindItem",
+      "registry": "sMdFunc",
+      "signature": "ControlFindItem(String, Variant, [, Variant], [, String], [, String], [, String])  -> IntPtr",
+      "arguments": [
+        "String",
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret IntPtr"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlFocus",
+      "registry": "sMdFunc",
+      "signature": "ControlFocus(Variant, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlGetChecked",
+      "registry": "sMdFunc",
+      "signature": "ControlGetChecked(Variant, [, Variant], [, String], [, String], [, String])  -> Bool32",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlGetChoice",
+      "registry": "sMdFunc",
+      "signature": "ControlGetChoice(Variant, [, Variant], [, String], [, String], [, String])  -> String",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlGetClassNN",
+      "registry": "sMdFunc",
+      "signature": "ControlGetClassNN(Variant, [, Variant], [, String], [, String], [, String])  -> String",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlGetEnabled",
+      "registry": "sMdFunc",
+      "signature": "ControlGetEnabled(Variant, [, Variant], [, String], [, String], [, String])  -> Bool32",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlGetExStyle",
+      "registry": "sMdFunc",
+      "signature": "ControlGetExStyle(Variant, [, Variant], [, String], [, String], [, String])  -> UInt32",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlGetFocus",
+      "registry": "sMdFunc",
+      "signature": "ControlGetFocus([, Variant], [, String], [, String], [, String])  -> UInt32",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlGetHwnd",
+      "registry": "sMdFunc",
+      "signature": "ControlGetHwnd(Variant, [, Variant], [, String], [, String], [, String])  -> UInt32",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlGetIndex",
+      "registry": "sMdFunc",
+      "signature": "ControlGetIndex(Variant, [, Variant], [, String], [, String], [, String])  -> IntPtr",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret IntPtr"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlGetItems",
+      "registry": "sMdFunc",
+      "signature": "ControlGetItems(Variant, [, Variant], [, String], [, String], [, String])  -> Object",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret Object"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlGetPos",
+      "registry": "sMdFunc",
+      "signature": "ControlGetPos([, Int32], [, Int32], [, Int32], [, Int32], Variant, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Out_Opt Int32",
+        "Out_Opt Int32",
+        "Out_Opt Int32",
+        "Out_Opt Int32",
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlGetStyle",
+      "registry": "sMdFunc",
+      "signature": "ControlGetStyle(Variant, [, Variant], [, String], [, String], [, String])  -> UInt32",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlGetText",
+      "registry": "sMdFunc",
+      "signature": "ControlGetText(Variant, [, Variant], [, String], [, String], [, String])  -> String",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlGetVisible",
+      "registry": "sMdFunc",
+      "signature": "ControlGetVisible(Variant, [, Variant], [, String], [, String], [, String])  -> Bool32",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlHide",
+      "registry": "sMdFunc",
+      "signature": "ControlHide(Variant, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlHideDropDown",
+      "registry": "sMdFunc",
+      "signature": "ControlHideDropDown(Variant, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlMove",
+      "registry": "sMdFunc",
+      "signature": "ControlMove([, Int32], [, Int32], [, Int32], [, Int32], Variant, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt Int32",
+        "Opt Int32",
+        "Opt Int32",
+        "Opt Int32",
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlSend",
+      "registry": "sMdFunc",
+      "signature": "ControlSend(String, [, Variant], [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "String",
+        "Opt Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlSendText",
+      "registry": "sMdFunc",
+      "signature": "ControlSendText(String, [, Variant], [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "String",
+        "Opt Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlSetChecked",
+      "registry": "sMdFunc",
+      "signature": "ControlSetChecked(Int32, Variant, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Int32",
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlSetEnabled",
+      "registry": "sMdFunc",
+      "signature": "ControlSetEnabled(Int32, Variant, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Int32",
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlSetExStyle",
+      "registry": "sMdFunc",
+      "signature": "ControlSetExStyle(String, Variant, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "String",
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlSetStyle",
+      "registry": "sMdFunc",
+      "signature": "ControlSetStyle(String, Variant, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "String",
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlSetText",
+      "registry": "sMdFunc",
+      "signature": "ControlSetText(String, Variant, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "String",
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlShow",
+      "registry": "sMdFunc",
+      "signature": "ControlShow(Variant, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ControlShowDropDown",
+      "registry": "sMdFunc",
+      "signature": "ControlShowDropDown(Variant, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "CoordMode",
+      "registry": "sMdFunc",
+      "signature": "CoordMode(String, [, String])  -> String",
+      "arguments": [
+        "String",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Cos",
+      "registry": "g_BIF",
+      "signature": "Cos(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Critical",
+      "registry": "sMdFunc",
+      "signature": "Critical([, String])  -> Int32",
+      "arguments": [
+        "Opt String",
+        "Out_Ret Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DateAdd",
+      "registry": "sMdFunc",
+      "signature": "DateAdd(String, Float64, String)  -> String",
+      "arguments": [
+        "String",
+        "Float64",
+        "String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DateDiff",
+      "registry": "sMdFunc",
+      "signature": "DateDiff(String, String, String)  -> Int64",
+      "arguments": [
+        "String",
+        "String",
+        "String",
+        "Out_Ret Int64"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DefineProp",
+      "registry": "g_BIF",
+      "signature": "DefineProp(arg1, arg2, arg3)",
+      "arguments": null,
+      "min_params": 3,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DetectHiddenText",
+      "registry": "sMdFunc",
+      "signature": "DetectHiddenText(Bool32)  -> Bool32",
+      "arguments": [
+        "Bool32",
+        "Out_Ret Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DetectHiddenWindows",
+      "registry": "sMdFunc",
+      "signature": "DetectHiddenWindows(Bool32)  -> Bool32",
+      "arguments": [
+        "Bool32",
+        "Out_Ret Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DirCopy",
+      "registry": "sMdFunc",
+      "signature": "DirCopy(String, String, [, Int32])",
+      "arguments": [
+        "String",
+        "String",
+        "Opt Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DirCreate",
+      "registry": "sMdFunc",
+      "signature": "DirCreate(String)",
+      "arguments": "String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DirDelete",
+      "registry": "sMdFunc",
+      "signature": "DirDelete(String, [, Bool32])",
+      "arguments": [
+        "String",
+        "Opt Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DirExist",
+      "registry": "sMdFunc",
+      "signature": "DirExist(String)  -> String",
+      "arguments": [
+        "String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DirMove",
+      "registry": "sMdFunc",
+      "signature": "DirMove(String, String, [, String])",
+      "arguments": [
+        "String",
+        "String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DirSelect",
+      "registry": "sMdFunc",
+      "signature": "DirSelect([, String], [, Int32], [, String])  -> String",
+      "arguments": [
+        "Opt String",
+        "Opt Int32",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DllCall",
+      "registry": "g_BIF",
+      "signature": "DllCall(arg1, ...)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": null,
+      "variadic": true,
+      "outputs": null
+    },
+    {
+      "name": "Download",
+      "registry": "sMdFunc",
+      "signature": "Download(String, String)",
+      "arguments": [
+        "String",
+        "String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DriveEject",
+      "registry": "sMdFunc",
+      "signature": "DriveEject([, String])",
+      "arguments": "Opt String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DriveGetCapacity",
+      "registry": "sMdFunc",
+      "signature": "DriveGetCapacity(String)  -> Int64",
+      "arguments": [
+        "String",
+        "Out_Ret Int64"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DriveGetFilesystem",
+      "registry": "sMdFunc",
+      "signature": "DriveGetFilesystem(String)  -> String",
+      "arguments": [
+        "String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DriveGetLabel",
+      "registry": "sMdFunc",
+      "signature": "DriveGetLabel(String)  -> String",
+      "arguments": [
+        "String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DriveGetList",
+      "registry": "sMdFunc",
+      "signature": "DriveGetList([, String])  -> String",
+      "arguments": [
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DriveGetSerial",
+      "registry": "sMdFunc",
+      "signature": "DriveGetSerial(String)  -> Int64",
+      "arguments": [
+        "String",
+        "Out_Ret Int64"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DriveGetSpaceFree",
+      "registry": "sMdFunc",
+      "signature": "DriveGetSpaceFree(String)  -> Int64",
+      "arguments": [
+        "String",
+        "Out_Ret Int64"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DriveGetStatus",
+      "registry": "sMdFunc",
+      "signature": "DriveGetStatus(String)  -> String",
+      "arguments": [
+        "String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DriveGetStatusCD",
+      "registry": "sMdFunc",
+      "signature": "DriveGetStatusCD([, String])  -> String",
+      "arguments": [
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DriveGetType",
+      "registry": "sMdFunc",
+      "signature": "DriveGetType(String)  -> String",
+      "arguments": [
+        "String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DriveLock",
+      "registry": "sMdFunc",
+      "signature": "DriveLock(String)",
+      "arguments": "String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DriveRetract",
+      "registry": "sMdFunc",
+      "signature": "DriveRetract([, String])",
+      "arguments": "Opt String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DriveSetLabel",
+      "registry": "sMdFunc",
+      "signature": "DriveSetLabel(String, [, String])",
+      "arguments": [
+        "String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "DriveUnlock",
+      "registry": "sMdFunc",
+      "signature": "DriveUnlock(String)",
+      "arguments": "String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Edit",
+      "registry": "sMdFunc",
+      "signature": "Edit([, String])",
+      "arguments": "Opt String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "EditGetCurrentCol",
+      "registry": "sMdFunc",
+      "signature": "EditGetCurrentCol(Variant, [, Variant], [, String], [, String], [, String])  -> UInt32",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "EditGetCurrentLine",
+      "registry": "sMdFunc",
+      "signature": "EditGetCurrentLine(Variant, [, Variant], [, String], [, String], [, String])  -> MdType(8)",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret MdType(8)"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "EditGetLine",
+      "registry": "sMdFunc",
+      "signature": "EditGetLine(IntPtr, Variant, [, Variant], [, String], [, String], [, String])  -> String",
+      "arguments": [
+        "IntPtr",
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "EditGetLineCount",
+      "registry": "sMdFunc",
+      "signature": "EditGetLineCount(Variant, [, Variant], [, String], [, String], [, String])  -> MdType(8)",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret MdType(8)"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "EditGetSelectedText",
+      "registry": "sMdFunc",
+      "signature": "EditGetSelectedText(Variant, [, Variant], [, String], [, String], [, String])  -> String",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "EditPaste",
+      "registry": "sMdFunc",
+      "signature": "EditPaste(String, Variant, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "String",
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "EnvGet",
+      "registry": "sMdFunc",
+      "signature": "EnvGet(String)  -> String",
+      "arguments": [
+        "String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "EnvSet",
+      "registry": "sMdFunc",
+      "signature": "EnvSet(String, [, String])",
+      "arguments": [
+        "String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Exit",
+      "registry": "sMdFunc",
+      "signature": "Exit([, Int32])",
+      "arguments": "Opt Int32",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ExitApp",
+      "registry": "sMdFunc",
+      "signature": "ExitApp([, Int32])",
+      "arguments": "Opt Int32",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Exp",
+      "registry": "g_BIF",
+      "signature": "Exp(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileAppend",
+      "registry": "sMdFunc",
+      "signature": "FileAppend(Variant, [, String], [, String])",
+      "arguments": [
+        "Variant",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileCopy",
+      "registry": "sMdFunc",
+      "signature": "FileCopy(String, String, [, Int32])",
+      "arguments": [
+        "String",
+        "String",
+        "Opt Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileCreateShortcut",
+      "registry": "sMdFunc",
+      "signature": "FileCreateShortcut(String, String, [, String], [, String], [, String], [, String], [, String], [, Int32], [, Int32])",
+      "arguments": [
+        "String",
+        "String",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Opt Int32",
+        "Opt Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileDelete",
+      "registry": "sMdFunc",
+      "signature": "FileDelete(String)",
+      "arguments": "String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileEncoding",
+      "registry": "sMdFunc",
+      "signature": "FileEncoding(String)  -> Variant",
+      "arguments": [
+        "String",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileExist",
+      "registry": "sMdFunc",
+      "signature": "FileExist(String)  -> String",
+      "arguments": [
+        "String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileGetAttrib",
+      "registry": "sMdFunc",
+      "signature": "FileGetAttrib([, String])  -> String",
+      "arguments": [
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileGetShortcut",
+      "registry": "sMdFunc",
+      "signature": "FileGetShortcut(String, [, String], [, String], [, String], [, String], [, String], [, Variant], [, Int32])",
+      "arguments": [
+        "String",
+        "Out_Opt String",
+        "Out_Opt String",
+        "Out_Opt String",
+        "Out_Opt String",
+        "Out_Opt String",
+        "Out_Opt Variant",
+        "Out_Opt Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileGetSize",
+      "registry": "sMdFunc",
+      "signature": "FileGetSize([, String], [, String])  -> Int64",
+      "arguments": [
+        "Opt String",
+        "Opt String",
+        "Out_Ret Int64"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileGetTime",
+      "registry": "sMdFunc",
+      "signature": "FileGetTime([, String], [, String])  -> String",
+      "arguments": [
+        "Opt String",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileGetVersion",
+      "registry": "sMdFunc",
+      "signature": "FileGetVersion([, String])  -> String",
+      "arguments": [
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileInstall",
+      "registry": "sMdFunc",
+      "signature": "FileInstall(String, String, [, Int32])",
+      "arguments": [
+        "String",
+        "String",
+        "Opt Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileMove",
+      "registry": "sMdFunc",
+      "signature": "FileMove(String, String, [, Int32])",
+      "arguments": [
+        "String",
+        "String",
+        "Opt Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileOpen",
+      "registry": "g_BIF",
+      "signature": "FileOpen(arg1, arg2)",
+      "arguments": null,
+      "min_params": 2,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileRead",
+      "registry": "sMdFunc",
+      "signature": "FileRead(String, [, String])  -> Variant",
+      "arguments": [
+        "String",
+        "Opt String",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileRecycle",
+      "registry": "sMdFunc",
+      "signature": "FileRecycle(String)",
+      "arguments": "String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileRecycleEmpty",
+      "registry": "sMdFunc",
+      "signature": "FileRecycleEmpty([, String])",
+      "arguments": "Opt String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileSelect",
+      "registry": "sMdFunc",
+      "signature": "FileSelect([, String], [, String], [, String], [, String])  -> Variant",
+      "arguments": [
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileSetAttrib",
+      "registry": "sMdFunc",
+      "signature": "FileSetAttrib(String, [, String], [, String])",
+      "arguments": [
+        "String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "FileSetTime",
+      "registry": "sMdFunc",
+      "signature": "FileSetTime([, String], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Floor",
+      "registry": "g_BIF",
+      "signature": "Floor(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Format",
+      "registry": "g_BIF",
+      "signature": "Format(arg1, ...)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": null,
+      "variadic": true,
+      "outputs": null
+    },
+    {
+      "name": "FormatTime",
+      "registry": "g_BIF",
+      "signature": "FormatTime()",
+      "arguments": null,
+      "min_params": 0,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "GetKeyName",
+      "registry": "sMdFunc",
+      "signature": "GetKeyName(String)  -> String",
+      "arguments": [
+        "String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "GetKeySC",
+      "registry": "sMdFunc",
+      "signature": "GetKeySC(String)",
+      "arguments": "String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "GetKeyState",
+      "registry": "sMdFunc",
+      "signature": "GetKeyState(String, [, String])  -> Variant",
+      "arguments": [
+        "String",
+        "Opt String",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "GetKeyVK",
+      "registry": "sMdFunc",
+      "signature": "GetKeyVK(String)",
+      "arguments": "String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "GetMethod",
+      "registry": "g_BIF",
+      "signature": "GetMethod(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "GroupActivate",
+      "registry": "sMdFunc",
+      "signature": "GroupActivate(String, [, String])  -> UInt32",
+      "arguments": [
+        "String",
+        "Opt String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "GroupAdd",
+      "registry": "sMdFunc",
+      "signature": "GroupAdd(String, [, String], [, String], [, String], [, String])",
+      "arguments": [
+        "String",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "GroupClose",
+      "registry": "sMdFunc",
+      "signature": "GroupClose(String, [, String])",
+      "arguments": [
+        "String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "GroupDeactivate",
+      "registry": "sMdFunc",
+      "signature": "GroupDeactivate(String, [, String])",
+      "arguments": [
+        "String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "GuiCtrlFromHwnd",
+      "registry": "sMdFunc",
+      "signature": "GuiCtrlFromHwnd(UInt32)  -> Object",
+      "arguments": [
+        "UInt32",
+        "Out_Ret Object"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "GuiFromHwnd",
+      "registry": "sMdFunc",
+      "signature": "GuiFromHwnd(UInt32, [, Bool32])  -> Object",
+      "arguments": [
+        "UInt32",
+        "Opt Bool32",
+        "Out_Ret Object"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "HasBase",
+      "registry": "g_BIF",
+      "signature": "HasBase(arg1, arg2)",
+      "arguments": null,
+      "min_params": 2,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "HasMethod",
+      "registry": "g_BIF",
+      "signature": "HasMethod(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "HasProp",
+      "registry": "g_BIF",
+      "signature": "HasProp(arg1, arg2)",
+      "arguments": null,
+      "min_params": 2,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "HotIf",
+      "registry": "sMdFunc",
+      "signature": "HotIf([, Variant])  -> Variant",
+      "arguments": [
+        "Opt Variant",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "HotIfWinActive",
+      "registry": "sMdFunc",
+      "signature": "HotIfWinActive([, String], [, String])  -> Variant",
+      "arguments": [
+        "Opt String",
+        "Opt String",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "HotIfWinExist",
+      "registry": "sMdFunc",
+      "signature": "HotIfWinExist([, String], [, String])  -> Variant",
+      "arguments": [
+        "Opt String",
+        "Opt String",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "HotIfWinNotActive",
+      "registry": "sMdFunc",
+      "signature": "HotIfWinNotActive([, String], [, String])  -> Variant",
+      "arguments": [
+        "Opt String",
+        "Opt String",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "HotIfWinNotExist",
+      "registry": "sMdFunc",
+      "signature": "HotIfWinNotExist([, String], [, String])  -> Variant",
+      "arguments": [
+        "Opt String",
+        "Opt String",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Hotkey",
+      "registry": "sMdFunc",
+      "signature": "Hotkey(String, [, Variant], [, String])",
+      "arguments": [
+        "String",
+        "Opt Variant",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Hotstring",
+      "registry": "sMdFunc",
+      "signature": "Hotstring(String, [, Variant], [, String])  -> Variant",
+      "arguments": [
+        "String",
+        "Opt Variant",
+        "Opt String",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "HttpRequest",
+      "registry": "patch",
+      "signature": "HttpRequest(url, [, options])  -> Map",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IL_Add",
+      "registry": "sMdFunc",
+      "signature": "IL_Add(MdType(8), String, [, Int32], [, Bool32])  -> Int32",
+      "arguments": [
+        "MdType(8)",
+        "String",
+        "Opt Int32",
+        "Opt Bool32",
+        "Out_Ret Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IL_Create",
+      "registry": "sMdFunc",
+      "signature": "IL_Create([, Int32], [, Int32], [, Bool32])",
+      "arguments": [
+        "Opt Int32",
+        "Opt Int32",
+        "Opt Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IL_Destroy",
+      "registry": "sMdFunc",
+      "signature": "IL_Destroy(MdType(8))",
+      "arguments": "MdType(8)",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ImageSearch",
+      "registry": "sMdFunc",
+      "signature": "ImageSearch([, Variant], [, Variant], Int32, Int32, Int32, Int32, String)  -> Bool32",
+      "arguments": [
+        "Out_Opt Variant",
+        "Out_Opt Variant",
+        "Int32",
+        "Int32",
+        "Int32",
+        "Int32",
+        "String",
+        "Out_Ret Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IniDelete",
+      "registry": "sMdFunc",
+      "signature": "IniDelete(String, String, [, String])",
+      "arguments": [
+        "String",
+        "String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IniRead",
+      "registry": "sMdFunc",
+      "signature": "IniRead(String, [, String], [, String], [, String])  -> String",
+      "arguments": [
+        "String",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IniWrite",
+      "registry": "sMdFunc",
+      "signature": "IniWrite(String, String, String, [, String])",
+      "arguments": [
+        "String",
+        "String",
+        "String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "InputBox",
+      "registry": "sMdFunc",
+      "signature": "InputBox([, String], [, String], [, String], [, String])  -> Object",
+      "arguments": [
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret Object"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "InstallKeybdHook",
+      "registry": "sMdFunc",
+      "signature": "InstallKeybdHook([, Bool32], [, Bool32])",
+      "arguments": [
+        "Opt Bool32",
+        "Opt Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "InstallMouseHook",
+      "registry": "sMdFunc",
+      "signature": "InstallMouseHook([, Bool32], [, Bool32])",
+      "arguments": [
+        "Opt Bool32",
+        "Opt Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "InStr",
+      "registry": "g_BIF",
+      "signature": "InStr(arg1, arg2)",
+      "arguments": null,
+      "min_params": 2,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IsAlnum",
+      "registry": "g_BIF",
+      "signature": "IsAlnum(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IsAlpha",
+      "registry": "g_BIF",
+      "signature": "IsAlpha(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IsDigit",
+      "registry": "g_BIF",
+      "signature": "IsDigit(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IsFloat",
+      "registry": "g_BIF",
+      "signature": "IsFloat(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IsInteger",
+      "registry": "g_BIF",
+      "signature": "IsInteger(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IsLabel",
+      "registry": "sMdFunc",
+      "signature": "IsLabel(String)",
+      "arguments": "String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IsLower",
+      "registry": "g_BIF",
+      "signature": "IsLower(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IsNumber",
+      "registry": "g_BIF",
+      "signature": "IsNumber(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IsObject",
+      "registry": "g_BIF",
+      "signature": "IsObject(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IsSetRef",
+      "registry": "g_BIF",
+      "signature": "IsSetRef(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": "1"
+    },
+    {
+      "name": "IsSpace",
+      "registry": "g_BIF",
+      "signature": "IsSpace(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IsTime",
+      "registry": "g_BIF",
+      "signature": "IsTime(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IsUpper",
+      "registry": "g_BIF",
+      "signature": "IsUpper(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "IsXDigit",
+      "registry": "g_BIF",
+      "signature": "IsXDigit(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "JsonParse",
+      "registry": "patch",
+      "signature": "JsonParse(text)  -> Any",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "JsonStringify",
+      "registry": "patch",
+      "signature": "JsonStringify(value, [, indent])  -> String",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "KeyHistory",
+      "registry": "sMdFunc",
+      "signature": "KeyHistory([, Int32])",
+      "arguments": "Opt Int32",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "KeyWait",
+      "registry": "sMdFunc",
+      "signature": "KeyWait(String, [, String])  -> Bool32",
+      "arguments": [
+        "String",
+        "Opt String",
+        "Out_Ret Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ListHotkeys",
+      "registry": "sMdFunc",
+      "signature": "ListHotkeys()",
+      "arguments": null,
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ListLines",
+      "registry": "sMdFunc",
+      "signature": "ListLines([, Int32])  -> Int32",
+      "arguments": [
+        "Opt Int32",
+        "Out_Ret Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ListVars",
+      "registry": "sMdFunc",
+      "signature": "ListVars()",
+      "arguments": null,
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ListViewGetContent",
+      "registry": "sMdFunc",
+      "signature": "ListViewGetContent([, String], Variant, [, Variant], [, String], [, String], [, String])  -> Variant",
+      "arguments": [
+        "Opt String",
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Ln",
+      "registry": "g_BIF",
+      "signature": "Ln(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "LoadPicture",
+      "registry": "sMdFunc",
+      "signature": "LoadPicture(String, [, String], [, Int32])  -> MdType(8)",
+      "arguments": [
+        "String",
+        "Opt String",
+        "Out_Opt Int32",
+        "Out_Ret MdType(8)"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Log",
+      "registry": "g_BIF",
+      "signature": "Log(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "LTrim",
+      "registry": "g_BIF",
+      "signature": "LTrim(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Max",
+      "registry": "g_BIF",
+      "signature": "Max(arg1, ...)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": null,
+      "variadic": true,
+      "outputs": null
+    },
+    {
+      "name": "MenuFromHandle",
+      "registry": "sMdFunc",
+      "signature": "MenuFromHandle(MdType(8))  -> Object",
+      "arguments": [
+        "MdType(8)",
+        "Out_Ret Object"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "MenuSelect",
+      "registry": "sMdFunc",
+      "signature": "MenuSelect([, Variant], [, String], String, [, String], [, String], [, String], [, String], [, String], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "String",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Min",
+      "registry": "g_BIF",
+      "signature": "Min(arg1, ...)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": null,
+      "variadic": true,
+      "outputs": null
+    },
+    {
+      "name": "Mod",
+      "registry": "g_BIF",
+      "signature": "Mod(arg1, arg2)",
+      "arguments": null,
+      "min_params": 2,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "MonitorGet",
+      "registry": "sMdFunc",
+      "signature": "MonitorGet([, Int32], [, Int32], [, Int32], [, Int32], [, Int32])  -> Int32",
+      "arguments": [
+        "Opt Int32",
+        "Out_Opt Int32",
+        "Out_Opt Int32",
+        "Out_Opt Int32",
+        "Out_Opt Int32",
+        "Out_Ret Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "MonitorGetCount",
+      "registry": "sMdFunc",
+      "signature": "MonitorGetCount()",
+      "arguments": null,
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "MonitorGetName",
+      "registry": "sMdFunc",
+      "signature": "MonitorGetName([, Int32])  -> String",
+      "arguments": [
+        "Opt Int32",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "MonitorGetPrimary",
+      "registry": "sMdFunc",
+      "signature": "MonitorGetPrimary()",
+      "arguments": null,
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "MonitorGetWorkArea",
+      "registry": "sMdFunc",
+      "signature": "MonitorGetWorkArea([, Int32], [, Int32], [, Int32], [, Int32], [, Int32])  -> Int32",
+      "arguments": [
+        "Opt Int32",
+        "Out_Opt Int32",
+        "Out_Opt Int32",
+        "Out_Opt Int32",
+        "Out_Opt Int32",
+        "Out_Ret Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "MouseClick",
+      "registry": "sMdFunc",
+      "signature": "MouseClick([, String], [, Int32], [, Int32], [, Int32], [, Int32], [, String], [, String])",
+      "arguments": [
+        "Opt String",
+        "Opt Int32",
+        "Opt Int32",
+        "Opt Int32",
+        "Opt Int32",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "MouseClickDrag",
+      "registry": "sMdFunc",
+      "signature": "MouseClickDrag([, String], [, Int32], [, Int32], Int32, Int32, [, Int32], [, String])",
+      "arguments": [
+        "Opt String",
+        "Opt Int32",
+        "Opt Int32",
+        "Int32",
+        "Int32",
+        "Opt Int32",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "MouseGetPos",
+      "registry": "sMdFunc",
+      "signature": "MouseGetPos([, Int32], [, Int32], [, Variant], [, Variant], [, Int32])",
+      "arguments": [
+        "Out_Opt Int32",
+        "Out_Opt Int32",
+        "Out_Opt Variant",
+        "Out_Opt Variant",
+        "Opt Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "MouseMove",
+      "registry": "sMdFunc",
+      "signature": "MouseMove(Int32, Int32, [, Int32], [, String])",
+      "arguments": [
+        "Int32",
+        "Int32",
+        "Opt Int32",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "MsgBox",
+      "registry": "sMdFunc",
+      "signature": "MsgBox([, String], [, String], [, String])  -> String",
+      "arguments": [
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "NumGet",
+      "registry": "g_BIF",
+      "signature": "NumGet(arg1, arg2)",
+      "arguments": null,
+      "min_params": 2,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "NumPut",
+      "registry": "g_BIF",
+      "signature": "NumPut(arg1, arg2, arg3, ...)",
+      "arguments": null,
+      "min_params": 3,
+      "max_params": null,
+      "variadic": true,
+      "outputs": null
+    },
+    {
+      "name": "ObjAddRef",
+      "registry": "g_BIF",
+      "signature": "ObjAddRef(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ObjBindMethod",
+      "registry": "g_BIF",
+      "signature": "ObjBindMethod(arg1, ...)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": null,
+      "variadic": true,
+      "outputs": null
+    },
+    {
+      "name": "ObjFromPtr",
+      "registry": "g_BIF",
+      "signature": "ObjFromPtr(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ObjFromPtrAddRef",
+      "registry": "g_BIF",
+      "signature": "ObjFromPtrAddRef(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ObjGetBase",
+      "registry": "g_BIF",
+      "signature": "ObjGetBase(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ObjGetCapacity",
+      "registry": "g_BIF",
+      "signature": "ObjGetCapacity(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ObjGetDataPtr",
+      "registry": "sMdFunc",
+      "signature": "ObjGetDataPtr(Object)  -> MdType(8)",
+      "arguments": [
+        "Object",
+        "Out_Ret MdType(8)"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ObjGetDataSize",
+      "registry": "sMdFunc",
+      "signature": "ObjGetDataSize(Object)  -> MdType(8)",
+      "arguments": [
+        "Object",
+        "Out_Ret MdType(8)"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ObjHasOwnProp",
+      "registry": "g_BIF",
+      "signature": "ObjHasOwnProp(arg1, arg2)",
+      "arguments": null,
+      "min_params": 2,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ObjOwnPropCount",
+      "registry": "g_BIF",
+      "signature": "ObjOwnPropCount(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ObjOwnProps",
+      "registry": "g_BIF",
+      "signature": "ObjOwnProps(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ObjPtr",
+      "registry": "g_BIF",
+      "signature": "ObjPtr(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ObjPtrAddRef",
+      "registry": "g_BIF",
+      "signature": "ObjPtrAddRef(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ObjRelease",
+      "registry": "g_BIF",
+      "signature": "ObjRelease(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ObjSetBase",
+      "registry": "g_BIF",
+      "signature": "ObjSetBase(arg1, arg2)",
+      "arguments": null,
+      "min_params": 2,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ObjSetCapacity",
+      "registry": "g_BIF",
+      "signature": "ObjSetCapacity(arg1, arg2)",
+      "arguments": null,
+      "min_params": 2,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ObjSetDataPtr",
+      "registry": "sMdFunc",
+      "signature": "ObjSetDataPtr(Object, MdType(8))",
+      "arguments": [
+        "Object",
+        "MdType(8)"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "OnClipboardChange",
+      "registry": "sMdFunc",
+      "signature": "OnClipboardChange(Object, [, Int32])",
+      "arguments": [
+        "Object",
+        "Opt Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "OnError",
+      "registry": "sMdFunc",
+      "signature": "OnError(Object, [, Int32])",
+      "arguments": [
+        "Object",
+        "Opt Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "OnExit",
+      "registry": "sMdFunc",
+      "signature": "OnExit(Object, [, Int32])",
+      "arguments": [
+        "Object",
+        "Opt Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "OnMessage",
+      "registry": "sMdFunc",
+      "signature": "OnMessage(UInt32, Object, [, Int32])",
+      "arguments": [
+        "UInt32",
+        "Object",
+        "Opt Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Ord",
+      "registry": "g_BIF",
+      "signature": "Ord(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "OutputDebug",
+      "registry": "sMdFunc",
+      "signature": "OutputDebug(String)",
+      "arguments": "String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Pause",
+      "registry": "sMdFunc",
+      "signature": "Pause([, Int32])",
+      "arguments": "Opt Int32",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Persistent",
+      "registry": "sMdFunc",
+      "signature": "Persistent([, Bool32])  -> Bool32",
+      "arguments": [
+        "Opt Bool32",
+        "Out_Ret Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "PixelGetColor",
+      "registry": "sMdFunc",
+      "signature": "PixelGetColor(Int32, Int32, [, String])  -> String",
+      "arguments": [
+        "Int32",
+        "Int32",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "PixelSearch",
+      "registry": "sMdFunc",
+      "signature": "PixelSearch([, Variant], [, Variant], Int32, Int32, Int32, Int32, UInt32, [, Int32])  -> Bool32",
+      "arguments": [
+        "Out_Ret Bool32",
+        "Out_Opt Variant",
+        "Out_Opt Variant",
+        "Int32",
+        "Int32",
+        "Int32",
+        "Int32",
+        "UInt32",
+        "Opt Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "PostMessage",
+      "registry": "sMdFunc",
+      "signature": "PostMessage(UInt32, [, Variant], [, Variant], [, Variant], [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "UInt32",
+        "Opt Variant",
+        "Opt Variant",
+        "Opt Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ProcessClose",
+      "registry": "sMdFunc",
+      "signature": "ProcessClose(String)  -> UInt32",
+      "arguments": [
+        "String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ProcessExist",
+      "registry": "sMdFunc",
+      "signature": "ProcessExist([, String])",
+      "arguments": "Opt String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ProcessGetName",
+      "registry": "sMdFunc",
+      "signature": "ProcessGetName([, String])  -> String",
+      "arguments": [
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ProcessGetParent",
+      "registry": "sMdFunc",
+      "signature": "ProcessGetParent([, String])",
+      "arguments": "Opt String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ProcessGetPath",
+      "registry": "sMdFunc",
+      "signature": "ProcessGetPath([, String])  -> String",
+      "arguments": [
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ProcessSetPriority",
+      "registry": "sMdFunc",
+      "signature": "ProcessSetPriority(String, [, String])  -> UInt32",
+      "arguments": [
+        "String",
+        "Opt String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ProcessWait",
+      "registry": "sMdFunc",
+      "signature": "ProcessWait(String, [, Float64])  -> UInt32",
+      "arguments": [
+        "String",
+        "Opt Float64",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "ProcessWaitClose",
+      "registry": "sMdFunc",
+      "signature": "ProcessWaitClose(String, [, Float64])  -> UInt32",
+      "arguments": [
+        "String",
+        "Opt Float64",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Props",
+      "registry": "g_BIF",
+      "signature": "Props(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Random",
+      "registry": "g_BIF",
+      "signature": "Random()",
+      "arguments": null,
+      "min_params": 0,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "RegCreateKey",
+      "registry": "g_BIF",
+      "signature": "RegCreateKey()",
+      "arguments": null,
+      "min_params": 0,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "RegDelete",
+      "registry": "g_BIF",
+      "signature": "RegDelete()",
+      "arguments": null,
+      "min_params": 0,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "RegDeleteKey",
+      "registry": "g_BIF",
+      "signature": "RegDeleteKey()",
+      "arguments": null,
+      "min_params": 0,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "RegExMatch",
+      "registry": "sMdFunc",
+      "signature": "RegExMatch(Variant, String, [, Object], [, Int32])  -> Int32",
+      "arguments": [
+        "Variant",
+        "String",
+        "Out_Opt Object",
+        "Opt Int32",
+        "Out_Ret Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "RegExReplace",
+      "registry": "sMdFunc",
+      "signature": "RegExReplace(Variant, String, [, Variant], [, Int32], [, Int32], [, Int32])  -> Variant",
+      "arguments": [
+        "Variant",
+        "String",
+        "Opt Variant",
+        "Out_Opt Int32",
+        "Opt Int32",
+        "Opt Int32",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "RegRead",
+      "registry": "g_BIF",
+      "signature": "RegRead()",
+      "arguments": null,
+      "min_params": 0,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "RegWrite",
+      "registry": "g_BIF",
+      "signature": "RegWrite(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Reload",
+      "registry": "sMdFunc",
+      "signature": "Reload()",
+      "arguments": null,
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Round",
+      "registry": "g_BIF",
+      "signature": "Round(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "RTrim",
+      "registry": "g_BIF",
+      "signature": "RTrim(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Run",
+      "registry": "sMdFunc",
+      "signature": "Run(String, [, String], [, String], [, Variant])",
+      "arguments": [
+        "String",
+        "Opt String",
+        "Opt String",
+        "Out_Opt Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "RunAs",
+      "registry": "sMdFunc",
+      "signature": "RunAs([, String], [, String], [, String])",
+      "arguments": [
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "RunWait",
+      "registry": "sMdFunc",
+      "signature": "RunWait(String, [, String], [, String], [, Object])  -> Int32",
+      "arguments": [
+        "String",
+        "Opt String",
+        "Opt String",
+        "Opt Object",
+        "Out_Ret Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Send",
+      "registry": "sMdFunc",
+      "signature": "Send(String)",
+      "arguments": "String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SendEvent",
+      "registry": "sMdFunc",
+      "signature": "SendEvent(String)",
+      "arguments": "String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SendInput",
+      "registry": "sMdFunc",
+      "signature": "SendInput(String)",
+      "arguments": "String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SendLevel",
+      "registry": "sMdFunc",
+      "signature": "SendLevel(Int32)  -> Int32",
+      "arguments": [
+        "Int32",
+        "Out_Ret Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SendMessage",
+      "registry": "sMdFunc",
+      "signature": "SendMessage(UInt32, [, Variant], [, Variant], [, Variant], [, Variant], [, String], [, String], [, String], [, Int32])  -> MdType(8)",
+      "arguments": [
+        "UInt32",
+        "Opt Variant",
+        "Opt Variant",
+        "Opt Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Opt Int32",
+        "Out_Ret MdType(8)"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SendMode",
+      "registry": "sMdFunc",
+      "signature": "SendMode(String)  -> Variant",
+      "arguments": [
+        "String",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SendPlay",
+      "registry": "sMdFunc",
+      "signature": "SendPlay(String)",
+      "arguments": "String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SendText",
+      "registry": "sMdFunc",
+      "signature": "SendText(String)",
+      "arguments": "String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SetCapsLockState",
+      "registry": "sMdFunc",
+      "signature": "SetCapsLockState([, String])",
+      "arguments": "Opt String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SetControlDelay",
+      "registry": "sMdFunc",
+      "signature": "SetControlDelay(Int32)  -> Int32",
+      "arguments": [
+        "Int32",
+        "Out_Ret Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SetDefaultMouseSpeed",
+      "registry": "sMdFunc",
+      "signature": "SetDefaultMouseSpeed(Int32)  -> Int32",
+      "arguments": [
+        "Int32",
+        "Out_Ret Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SetKeyDelay",
+      "registry": "sMdFunc",
+      "signature": "SetKeyDelay([, Int32], [, Int32], [, String])",
+      "arguments": [
+        "Opt Int32",
+        "Opt Int32",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SetMouseDelay",
+      "registry": "sMdFunc",
+      "signature": "SetMouseDelay(Int32, [, String])  -> Int32",
+      "arguments": [
+        "Int32",
+        "Opt String",
+        "Out_Ret Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SetNumLockState",
+      "registry": "sMdFunc",
+      "signature": "SetNumLockState([, String])",
+      "arguments": "Opt String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SetRegView",
+      "registry": "sMdFunc",
+      "signature": "SetRegView(String)  -> Variant",
+      "arguments": [
+        "String",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SetScrollLockState",
+      "registry": "sMdFunc",
+      "signature": "SetScrollLockState([, String])",
+      "arguments": "Opt String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SetStoreCapsLockMode",
+      "registry": "sMdFunc",
+      "signature": "SetStoreCapsLockMode(Bool32)  -> Bool32",
+      "arguments": [
+        "Bool32",
+        "Out_Ret Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SetTimer",
+      "registry": "sMdFunc",
+      "signature": "SetTimer([, Object], [, Int64], [, Int32])",
+      "arguments": [
+        "Opt Object",
+        "Opt Int64",
+        "Opt Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SetTitleMatchMode",
+      "registry": "sMdFunc",
+      "signature": "SetTitleMatchMode(String)  -> Variant",
+      "arguments": [
+        "String",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SetWinDelay",
+      "registry": "sMdFunc",
+      "signature": "SetWinDelay(Int32)  -> Int32",
+      "arguments": [
+        "Int32",
+        "Out_Ret Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SetWorkingDir",
+      "registry": "sMdFunc",
+      "signature": "SetWorkingDir(String)",
+      "arguments": "String",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Shutdown",
+      "registry": "sMdFunc",
+      "signature": "Shutdown(Int32)",
+      "arguments": "Int32",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Sin",
+      "registry": "g_BIF",
+      "signature": "Sin(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Sleep",
+      "registry": "sMdFunc",
+      "signature": "Sleep(Int32)",
+      "arguments": "Int32",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Sort",
+      "registry": "g_BIF",
+      "signature": "Sort(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SoundBeep",
+      "registry": "sMdFunc",
+      "signature": "SoundBeep([, Int32], [, Int32])",
+      "arguments": [
+        "Opt Int32",
+        "Opt Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SoundGetInterface",
+      "registry": "g_BIF",
+      "signature": "SoundGetInterface(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SoundGetMute",
+      "registry": "g_BIF",
+      "signature": "SoundGetMute()",
+      "arguments": null,
+      "min_params": 0,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SoundGetName",
+      "registry": "g_BIF",
+      "signature": "SoundGetName()",
+      "arguments": null,
+      "min_params": 0,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SoundGetVolume",
+      "registry": "g_BIF",
+      "signature": "SoundGetVolume()",
+      "arguments": null,
+      "min_params": 0,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SoundPlay",
+      "registry": "sMdFunc",
+      "signature": "SoundPlay(String, [, String])",
+      "arguments": [
+        "String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SoundSetMute",
+      "registry": "g_BIF",
+      "signature": "SoundSetMute(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SoundSetVolume",
+      "registry": "g_BIF",
+      "signature": "SoundSetVolume(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SplitPath",
+      "registry": "sMdFunc",
+      "signature": "SplitPath(String, [, String], [, String], [, String], [, String], [, String])",
+      "arguments": [
+        "String",
+        "Out_Opt String",
+        "Out_Opt String",
+        "Out_Opt String",
+        "Out_Opt String",
+        "Out_Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Sqrt",
+      "registry": "g_BIF",
+      "signature": "Sqrt(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "StatusBarGetText",
+      "registry": "sMdFunc",
+      "signature": "StatusBarGetText([, Int32], [, Variant], [, String], [, String], [, String])  -> String",
+      "arguments": [
+        "Opt Int32",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "StatusBarWait",
+      "registry": "sMdFunc",
+      "signature": "StatusBarWait([, String], [, Float64], [, Int32], [, Variant], [, String], [, Int32], [, String], [, String])  -> Bool32",
+      "arguments": [
+        "Opt String",
+        "Opt Float64",
+        "Opt Int32",
+        "Opt Variant",
+        "Opt String",
+        "Opt Int32",
+        "Opt String",
+        "Opt String",
+        "Out_Ret Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "StrCompare",
+      "registry": "g_BIF",
+      "signature": "StrCompare(arg1, arg2)",
+      "arguments": null,
+      "min_params": 2,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "StrGet",
+      "registry": "g_BIF",
+      "signature": "StrGet(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "StrLen",
+      "registry": "g_BIF",
+      "signature": "StrLen(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "StrLower",
+      "registry": "g_BIF",
+      "signature": "StrLower(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "StrPtr",
+      "registry": "g_BIF",
+      "signature": "StrPtr(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "StrPut",
+      "registry": "g_BIF",
+      "signature": "StrPut(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "StrReplace",
+      "registry": "sMdFunc",
+      "signature": "StrReplace(Variant, String, [, String], [, Variant], [, UInt32], [, UInt32])  -> Variant",
+      "arguments": [
+        "Variant",
+        "String",
+        "Opt String",
+        "Opt Variant",
+        "Out_Opt UInt32",
+        "Opt UInt32",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "StrSplit",
+      "registry": "sMdFunc",
+      "signature": "StrSplit(String, [, Variant], [, String], [, Int32])  -> Object",
+      "arguments": [
+        "String",
+        "Opt Variant",
+        "Opt String",
+        "Opt Int32",
+        "Out_Ret Object"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "StrTitle",
+      "registry": "g_BIF",
+      "signature": "StrTitle(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "StrUpper",
+      "registry": "g_BIF",
+      "signature": "StrUpper(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SubStr",
+      "registry": "g_BIF",
+      "signature": "SubStr(arg1, arg2)",
+      "arguments": null,
+      "min_params": 2,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Suspend",
+      "registry": "sMdFunc",
+      "signature": "Suspend([, Int32])",
+      "arguments": "Opt Int32",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SysGet",
+      "registry": "sMdFunc",
+      "signature": "SysGet(Int32)",
+      "arguments": "Int32",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "SysGetIPAddresses",
+      "registry": "sMdFunc",
+      "signature": "SysGetIPAddresses()  -> Object",
+      "arguments": "Out_Ret Object",
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Tan",
+      "registry": "g_BIF",
+      "signature": "Tan(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Thread",
+      "registry": "sMdFunc",
+      "signature": "Thread(String, [, Int32], [, Int32])",
+      "arguments": [
+        "String",
+        "Opt Int32",
+        "Opt Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Throw",
+      "registry": "g_BIF",
+      "signature": "Throw(...)",
+      "arguments": null,
+      "min_params": 0,
+      "max_params": null,
+      "variadic": true,
+      "outputs": null
+    },
+    {
+      "name": "ToolTip",
+      "registry": "sMdFunc",
+      "signature": "ToolTip([, String], [, Int32], [, Int32], [, Int32])  -> UInt32",
+      "arguments": [
+        "Opt String",
+        "Opt Int32",
+        "Opt Int32",
+        "Opt Int32",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "TraySetIcon",
+      "registry": "sMdFunc",
+      "signature": "TraySetIcon([, String], [, Int32], [, Bool32])",
+      "arguments": [
+        "Opt String",
+        "Opt Int32",
+        "Opt Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "TrayTip",
+      "registry": "sMdFunc",
+      "signature": "TrayTip([, String], [, String], [, String])",
+      "arguments": [
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Trim",
+      "registry": "g_BIF",
+      "signature": "Trim(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "Type",
+      "registry": "g_BIF",
+      "signature": "Type()",
+      "arguments": null,
+      "min_params": 0,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "VarSetStrCapacity",
+      "registry": "g_BIF",
+      "signature": "VarSetStrCapacity(arg1)",
+      "arguments": null,
+      "min_params": 1,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": "1"
+    },
+    {
+      "name": "VerCompare",
+      "registry": "g_BIF",
+      "signature": "VerCompare(arg1, arg2)",
+      "arguments": null,
+      "min_params": 2,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinActivate",
+      "registry": "sMdFunc",
+      "signature": "WinActivate([, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinActivateBottom",
+      "registry": "sMdFunc",
+      "signature": "WinActivateBottom([, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinActive",
+      "registry": "g_BIF",
+      "signature": "WinActive()",
+      "arguments": null,
+      "min_params": 0,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinClose",
+      "registry": "sMdFunc",
+      "signature": "WinClose([, Variant], [, String], [, Float64], [, String], [, String])",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt Float64",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinExist",
+      "registry": "g_BIF",
+      "signature": "WinExist()",
+      "arguments": null,
+      "min_params": 0,
+      "max_params": 0,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetAlwaysOnTop",
+      "registry": "sMdFunc",
+      "signature": "WinGetAlwaysOnTop([, Variant], [, String], [, String], [, String])  -> Bool32",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetClass",
+      "registry": "sMdFunc",
+      "signature": "WinGetClass([, Variant], [, String], [, String], [, String])  -> String",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetClientPos",
+      "registry": "sMdFunc",
+      "signature": "WinGetClientPos([, Int32], [, Int32], [, Int32], [, Int32], [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Out_Opt Int32",
+        "Out_Opt Int32",
+        "Out_Opt Int32",
+        "Out_Opt Int32",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetControls",
+      "registry": "sMdFunc",
+      "signature": "WinGetControls([, Variant], [, String], [, String], [, String])  -> Object",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret Object"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetControlsHwnd",
+      "registry": "sMdFunc",
+      "signature": "WinGetControlsHwnd([, Variant], [, String], [, String], [, String])  -> Object",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret Object"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetCount",
+      "registry": "sMdFunc",
+      "signature": "WinGetCount([, Variant], [, String], [, String], [, String])  -> Int32",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetEnabled",
+      "registry": "sMdFunc",
+      "signature": "WinGetEnabled([, Variant], [, String], [, String], [, String])  -> Bool32",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret Bool32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetExStyle",
+      "registry": "sMdFunc",
+      "signature": "WinGetExStyle([, Variant], [, String], [, String], [, String])  -> UInt32",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetID",
+      "registry": "sMdFunc",
+      "signature": "WinGetID([, Variant], [, String], [, String], [, String])  -> UInt32",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetIDLast",
+      "registry": "sMdFunc",
+      "signature": "WinGetIDLast([, Variant], [, String], [, String], [, String])  -> UInt32",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetList",
+      "registry": "sMdFunc",
+      "signature": "WinGetList([, Variant], [, String], [, String], [, String])  -> Object",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret Object"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetMinMax",
+      "registry": "sMdFunc",
+      "signature": "WinGetMinMax([, Variant], [, String], [, String], [, String])  -> Int32",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret Int32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetPID",
+      "registry": "sMdFunc",
+      "signature": "WinGetPID([, Variant], [, String], [, String], [, String])  -> UInt32",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetPos",
+      "registry": "sMdFunc",
+      "signature": "WinGetPos([, Int32], [, Int32], [, Int32], [, Int32], [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Out_Opt Int32",
+        "Out_Opt Int32",
+        "Out_Opt Int32",
+        "Out_Opt Int32",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetProcessName",
+      "registry": "sMdFunc",
+      "signature": "WinGetProcessName([, Variant], [, String], [, String], [, String])  -> String",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetProcessPath",
+      "registry": "sMdFunc",
+      "signature": "WinGetProcessPath([, Variant], [, String], [, String], [, String])  -> String",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetStyle",
+      "registry": "sMdFunc",
+      "signature": "WinGetStyle([, Variant], [, String], [, String], [, String])  -> UInt32",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetText",
+      "registry": "sMdFunc",
+      "signature": "WinGetText([, Variant], [, String], [, String], [, String])  -> String",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetTitle",
+      "registry": "sMdFunc",
+      "signature": "WinGetTitle([, Variant], [, String], [, String], [, String])  -> String",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetTransColor",
+      "registry": "sMdFunc",
+      "signature": "WinGetTransColor([, Variant], [, String], [, String], [, String])  -> String",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinGetTransparent",
+      "registry": "sMdFunc",
+      "signature": "WinGetTransparent([, Variant], [, String], [, String], [, String])  -> Variant",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String",
+        "Out_Ret Variant"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinHide",
+      "registry": "sMdFunc",
+      "signature": "WinHide([, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinKill",
+      "registry": "sMdFunc",
+      "signature": "WinKill([, Variant], [, String], [, Float64], [, String], [, String])",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt Float64",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinMaximize",
+      "registry": "sMdFunc",
+      "signature": "WinMaximize([, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinMinimize",
+      "registry": "sMdFunc",
+      "signature": "WinMinimize([, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinMinimizeAll",
+      "registry": "sMdFunc",
+      "signature": "WinMinimizeAll()",
+      "arguments": null,
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinMinimizeAllUndo",
+      "registry": "sMdFunc",
+      "signature": "WinMinimizeAllUndo()",
+      "arguments": null,
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinMove",
+      "registry": "sMdFunc",
+      "signature": "WinMove([, Int32], [, Int32], [, Int32], [, Int32], [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt Int32",
+        "Opt Int32",
+        "Opt Int32",
+        "Opt Int32",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinMoveBottom",
+      "registry": "sMdFunc",
+      "signature": "WinMoveBottom([, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinMoveTop",
+      "registry": "sMdFunc",
+      "signature": "WinMoveTop([, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinRedraw",
+      "registry": "sMdFunc",
+      "signature": "WinRedraw([, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinRestore",
+      "registry": "sMdFunc",
+      "signature": "WinRestore([, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinSetAlwaysOnTop",
+      "registry": "sMdFunc",
+      "signature": "WinSetAlwaysOnTop([, Int32], [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt Int32",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinSetEnabled",
+      "registry": "sMdFunc",
+      "signature": "WinSetEnabled(Int32, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Int32",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinSetExStyle",
+      "registry": "sMdFunc",
+      "signature": "WinSetExStyle(String, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "String",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinSetRegion",
+      "registry": "sMdFunc",
+      "signature": "WinSetRegion([, String], [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt String",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinSetStyle",
+      "registry": "sMdFunc",
+      "signature": "WinSetStyle(String, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "String",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinSetTitle",
+      "registry": "sMdFunc",
+      "signature": "WinSetTitle(String, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "String",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinSetTransColor",
+      "registry": "sMdFunc",
+      "signature": "WinSetTransColor(Variant, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Variant",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinSetTransparent",
+      "registry": "sMdFunc",
+      "signature": "WinSetTransparent(String, [, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "String",
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinShow",
+      "registry": "sMdFunc",
+      "signature": "WinShow([, Variant], [, String], [, String], [, String])",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt String",
+        "Opt String"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinWait",
+      "registry": "sMdFunc",
+      "signature": "WinWait([, Variant], [, String], [, Float64], [, String], [, String])  -> UInt32",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt Float64",
+        "Opt String",
+        "Opt String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinWaitActive",
+      "registry": "sMdFunc",
+      "signature": "WinWaitActive([, Variant], [, String], [, Float64], [, String], [, String])  -> UInt32",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt Float64",
+        "Opt String",
+        "Opt String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinWaitClose",
+      "registry": "sMdFunc",
+      "signature": "WinWaitClose([, Variant], [, String], [, Float64], [, String], [, String])  -> UInt32",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt Float64",
+        "Opt String",
+        "Opt String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    },
+    {
+      "name": "WinWaitNotActive",
+      "registry": "sMdFunc",
+      "signature": "WinWaitNotActive([, Variant], [, String], [, Float64], [, String], [, String])  -> UInt32",
+      "arguments": [
+        "Opt Variant",
+        "Opt String",
+        "Opt Float64",
+        "Opt String",
+        "Opt String",
+        "Out_Ret UInt32"
+      ],
+      "min_params": null,
+      "max_params": null,
+      "variadic": false,
+      "outputs": null
+    }
+  ]
+}

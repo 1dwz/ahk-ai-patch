@@ -1,5 +1,5 @@
 diff --git a/source/script.cpp b/source/script.cpp
-index 80fb021d..04f37b5b 100644
+index 80fb021d..8f546901 100644
 --- a/source/script.cpp
 +++ b/source/script.cpp
 @@ -66,6 +66,7 @@ FuncEntry g_BIF[] =
@@ -19,7 +19,41 @@ index 80fb021d..04f37b5b 100644
  	BIFn(Ln, 1, 1, BIF_SqrtLogLn),
  	BIFn(Log, 1, 1, BIF_SqrtLogLn),
  	BIFn(LTrim, 1, 2, BIF_Trim),
-@@ -318,7 +321,7 @@ Script::Script()
+@@ -143,6 +146,33 @@ FuncEntry g_BIF[] =
+ #undef BIFn
+ #undef BIF1
+ 
++// ahk-ai patch: /dump-api entry points.  g_BIF is file-local, so callers
++// elsewhere (AutoHotkey.cpp) go through these two accessors instead of
++// duplicating or re-declaring the table.
++int Script::BuiltinApiCount()
++{
++	return _countof(g_BIF);
++}
++
++const BuiltinApiFunc &Script::BuiltinApiAt(int aIndex)
++{
++	// A single shared view is enough: /dump-api reads one entry at a time and
++	// there is no concurrency to worry about during command-line parsing.
++	static BuiltinApiFunc sView;
++	FuncEntry &e = g_BIF[aIndex];
++	sView.name = e.mName;
++	sView.minParams = (int)e.mMinParams;
++	// MAX_FUNCTION_PARAMS marks an unlimited maximum; BuiltInFunc's constructor
++	// uses the same test when it sets mIsVariadic.
++	sView.variadic = (e.mMaxParams == MAX_FUNCTION_PARAMS);
++	sView.outputCount = 0;
++	for (int v = 0; v < MAX_FUNC_OUTPUT_VAR && e.mOutputVars[v]; ++v)
++	{
++		sView.outputs[sView.outputCount++] = e.mOutputVars[v];
++	}
++	return sView;
++}
++
+ 
+ #define A_x(name, fn) { _T(#name), fn, NULL }
+ #define A_(name) A_x(name, BIV_##name)
+@@ -318,7 +348,7 @@ Script::Script()
  	, mFileSpec(_T("")), mFileDir(_T("")), mFileName(_T("")), mOurEXE(_T("")), mOurEXEDir(_T("")), mMainWindowTitle(_T(""))
  	, mScriptName(NULL)
  	, mIsReadyToExecute(false), mAutoExecSectionIsRunning(false)
@@ -28,7 +62,7 @@ index 80fb021d..04f37b5b 100644
  #ifndef AUTOHOTKEYSC
  	, mValidateThenExit(false)
  	, mCmdLineInclude(NULL)
-@@ -606,6 +609,16 @@ ResultType Script::CreateWindows()
+@@ -606,6 +636,16 @@ ResultType Script::CreateWindows()
  // Returns OK or FAIL.
  {
  	if (!mMainWindowTitle || !*mMainWindowTitle) return FAIL;  // Init() must be called before this function.
@@ -45,7 +79,7 @@ index 80fb021d..04f37b5b 100644
  	// Register a window class for the main window:
  	WNDCLASSEX wc = {0};
  	wc.cbSize = sizeof(wc);
-@@ -1053,7 +1066,16 @@ ResultType Script::AutoExecSection()
+@@ -1053,7 +1093,16 @@ ResultType Script::AutoExecSection()
  
  	// Check if an exception has been thrown
  	if (g->ThrownToken)
@@ -62,7 +96,7 @@ index 80fb021d..04f37b5b 100644
  
  	// Now that the auto-execute thread has finished, ensure that the very first g-item is always
  	// interruptible.  This avoids having to treat the first g-item as special in various places.
-@@ -1411,7 +1433,7 @@ UINT Script::LoadFromFile(LPCTSTR aFileSpec)
+@@ -1411,7 +1460,7 @@ UINT Script::LoadFromFile(LPCTSTR aFileSpec)
  	DWORD attr = mKind == ScriptKindFile ? GetFileAttributes(aFileSpec) : 0; // v1.1.17: Don't check if reading script from stdin.
  	if (attr == MAXDWORD) // File does not exist or lacking the authorization to get its attributes.
  	{
@@ -71,7 +105,7 @@ index 80fb021d..04f37b5b 100644
  		{
  			TCHAR buf[T_MAX_PATH + 24];
  			sntprintf(buf, _countof(buf), _T("%s\n%s"), ERR_SCRIPT_NOT_FOUND, aFileSpec);
-@@ -1420,7 +1442,7 @@ UINT Script::LoadFromFile(LPCTSTR aFileSpec)
+@@ -1420,7 +1469,7 @@ UINT Script::LoadFromFile(LPCTSTR aFileSpec)
  		else
  		{
  			Line::sSourceFile = &mFileSpec;
