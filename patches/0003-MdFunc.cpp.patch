@@ -1,8 +1,8 @@
 diff --git a/source/MdFunc.cpp b/source/MdFunc.cpp
-index 93363107..dc094b46 100644
+index 93363107..80dc3162 100644
 --- a/source/MdFunc.cpp
 +++ b/source/MdFunc.cpp
-@@ -27,6 +27,87 @@ MdFuncEntry sMdFunc[]
+@@ -27,6 +27,85 @@ MdFuncEntry sMdFunc[]
  	#undef md_mode
  };
  
@@ -55,21 +55,19 @@ index 93363107..dc094b46 100644
 +	case MdType::Int32:     return _T("Int32");
 +	case MdType::UInt32:    return _T("UInt32");
 +	case MdType::Int64:     return _T("Int64");
-+	case MdType::IntPtr:    return _T("IntPtr");
-+#ifdef _WIN64
-+	// On x64 UIntPtr aliases UInt64 and IntPtr aliases Int64, so only one of
-+	// each pair can be a case label; the alias above wins.
-+#else
 +	case MdType::UInt64:    return _T("UInt64");
-+	case MdType::UIntPtr:   return _T("UIntPtr");
-+#endif
++	case MdType::IntPtr:    return _T("IntPtr");
++	// MdType::UIntPtr is a pure alias -- MdType.h defines it as
++	// Exp32or64(UInt32, UInt64) -- so its value is already one of the labels
++	// above on every target (UInt32 on Win32, UInt64 on x64).  Naming it here
++	// would be a duplicate case label, which /WX rejects as C2196.
 +	case MdType::Float64:   return _T("Float64");
 +	case MdType::Float32:   return _T("Float32");
 +	case MdType::String:    return _T("String");
 +	case MdType::Object:    return _T("Object");
 +	case MdType::Variant:   return _T("Variant");
 +	case MdType::Bool32:    return _T("Bool32");
-+	case MdType::ResultType:return _T("FResult");
++	case MdType::ResultType:return _T("ResultType");
 +	case MdType::FResult:   return _T("FResult");
 +	case MdType::Struct:    return _T("Struct");
 +	case MdType::Params:    return _T("Params");
