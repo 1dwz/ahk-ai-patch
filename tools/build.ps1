@@ -192,6 +192,35 @@ if (Test-Path $built) {
             }
         }
 
+        # Warn if the output does not match docs/ARTIFACT_CONTENTS.txt, which is
+        # the same list the CI verify job enforces.  Warning rather than failing:
+        # a local -OutDir may legitimately hold both architectures, which the
+        # single-arch CI artifact never does.
+        $manifest = Join-Path $RepoRoot 'docs\ARTIFACT_CONTENTS.txt'
+        if (Test-Path $manifest) {
+            $archName = if ($Platform -eq 'Win32') { '32' } else { '64' }
+            $expected = @(Get-Content $manifest |
+                ForEach-Object { $_.Trim() } |
+                Where-Object { $_ -and -not $_.StartsWith('#') } |
+                ForEach-Object { $_.Replace('<arch>', $archName) })
+            $actual = @(Get-ChildItem $OutDir -File | ForEach-Object { $_.Name })
+            $unexpected = @($actual | Where-Object { $expected -notcontains $_ })
+            $absent = @($expected | Where-Object { $actual -notcontains $_ })
+            if ($absent.Count) {
+                Write-Warning "artifact missing from $OutDir : $($absent -join ', ')"
+            }
+            # Both architectures in one local out dir is the normal case; only
+            # flag files that are not part of either arch's payload.
+            $benign = @($unexpected | Where-Object { $_ -match '^AutoHotkey(32|64)\.exe$' })
+            $reallyUnexpected = @($unexpected | Where-Object { $benign -notcontains $_ })
+            if ($reallyUnexpected.Count) {
+                Write-Warning "unexpected file(s) in $OutDir : $($reallyUnexpected -join ', ')"
+            }
+            if (-not $absent.Count -and -not $reallyUnexpected.Count) {
+                Write-Output 'Artifact: matches docs/ARTIFACT_CONTENTS.txt'
+            }
+        }
+
         # /AI is only useful if the diagnostics are actually visible, and
         # AutoHotkey.exe is a GUI-subsystem binary, so that depends on
         # AttachConsole.  Warn (do not fail) if a bare console shows nothing --

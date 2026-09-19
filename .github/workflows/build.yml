@@ -170,26 +170,45 @@ jobs:
         run: Get-ChildItem -Recurse dist | Select-Object FullName, Length
 
       # The whole point of the static link: one executable and nothing it has
-      # to load beside it.  The generated API docs are deliberately allowed
-      # through -- they ship with the binary so a downloader can read the
-      # function list -- but anything else (a DLL, a CA bundle, a stray
-      # object) means the self-containment claim is broken.
+      # to load beside it.  The generated API docs and the hand-written HTTP/JSON
+      # guide are deliberately allowed through -- they ship with the binary so a
+      # downloader can read the function list and the option reference -- but a
+      # DLL of any name, or anything else, means self-containment is broken.
+      #
+      # The expected payload is listed once, in docs/ARTIFACT_CONTENTS.txt, and
+      # read by both this check and tools/build.ps1.  Keeping a second copy here
+      # already caused a red run: when the guide was added to dist/, this list
+      # did not know about it.
       - name: Assert the artifact holds no loadable dependency
         shell: pwsh
         run: |
-          $allowed = @('AutoHotkey64.exe', 'BUILTIN_API.md', 'builtin-api.json')
-          $extra = @(Get-ChildItem dist -Recurse -File | Where-Object { $allowed -notcontains $_.Name })
-          if ($extra) {
-            Write-Output "::error::unexpected file(s) in the artifact (allowed: $($allowed -join ', ')):"
-            $extra | ForEach-Object { Write-Output "  $($_.FullName)" }
+          $manifest = 'docs/ARTIFACT_CONTENTS.txt'
+          if (-not (Test-Path $manifest)) {
+            Write-Output "::error::$manifest is missing; it lists the expected artifact payload"
             exit 1
           }
-          foreach ($doc in 'BUILTIN_API.md', 'builtin-api.json') {
-            if (-not (Test-Path "dist/$doc")) {
-              Write-Output "::error::$doc missing; the doc generation step did not run"
-              exit 1
-            }
+          $allowed = @(Get-Content $manifest | ForEach-Object { $_.Trim() } |
+            Where-Object { $_ -and -not $_.StartsWith('#') })
+          # <arch> must be substituted literally: it appears mid-string in
+          # AutoHotkey<arch>.exe, and using -replace would treat the brackets as
+          # regex and silently match nothing.
+          $allowed = @($allowed | ForEach-Object { $_.Replace('<arch>', '64') })
+          Write-Output "expected payload: $($allowed -join ', ')"
+
+          $present = @(Get-ChildItem dist -Recurse -File | ForEach-Object { $_.Name } | Sort-Object)
+          Write-Output "actual payload  : $($present -join ', ')"
+
+          $extra = @($present | Where-Object { $allowed -notcontains $_ })
+          if ($extra) {
+            Write-Output "::error::unexpected file(s) in the artifact: $($extra -join ', ')"
+            exit 1
           }
+          $missing = @($allowed | Where-Object { $present -notcontains $_ })
+          if ($missing) {
+            Write-Output "::error::missing from the artifact: $($missing -join ', ')"
+            exit 1
+          }
+
           # A loadable DLL beside the exe would defeat the single-file promise.
           $dlls = @(Get-ChildItem dist -Recurse -File -Filter *.dll)
           if ($dlls) {
@@ -202,7 +221,7 @@ jobs:
             Write-Output "::error::exe still imports $($Matches[0]); the static link did not take"
             exit 1
           }
-          Write-Output 'OK: no DLL beside the exe, no libcurl DLL import, docs present'
+          Write-Output 'OK: artifact payload matches the manifest, no DLL, no libcurl import'
           Write-Output ("size: {0:N0} bytes" -f (Get-Item 'dist/AutoHotkey64.exe').Length)
 
       - name: Run non-interactive smoke tests
