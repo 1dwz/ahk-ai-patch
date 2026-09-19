@@ -88,7 +88,69 @@ In this mode the interpreter:
   carries position info;
 - exits non-zero when a thread died from an unhandled error.
 
+Because `AutoHotkey.exe` is a Windows **GUI-subsystem** binary it does not
+externally own a console. In `/AI` mode it therefore calls
+`AttachConsole(ATTACH_PARENT_PROCESS)` so the diagnostics land in the terminal
+you launched it from. Without that, running
+`AutoHotkey64.exe /AI script.ahk` in a plain `cmd` window printed nothing at
+all — the text only appeared when stderr was redirected (`2>&1`), which is not
+how anyone types it. If there is no parent console the attach simply fails and
+the behaviour falls back to redirect-only, so piping and `2>` still work.
+
+> This is why `tools/test-noninteractive.ps1` is **not** sufficient on its own:
+> it always redirects stderr into a pipe, so it verifies the bytes exist but not
+> that a human would see them. `tools/test-console-visibility.ps1` owns a real
+> console and checks the second question; CI runs both.
+
 Normal interactive behaviour is unchanged unless the switch is passed.
+
+### 3. Built-in API dump and generated documentation (`/dump-api`)
+
+Upstream registers its built-in functions in **two disjoint tables**, and neither
+is queryable from a running interpreter:
+
+| Registry | Source | Entries | Carries |
+| --- | --- | --- | --- |
+| `g_BIF[]` | `source/script.cpp` | 104 | arity, variadic flag, output vars — no parameter names |
+| `sMdFunc[]` | `source/MdFunc.cpp` | 253 | full `MdType` argument types and return type |
+
+The sets do not overlap; together they are **357 functions**. `/dump-api` prints
+them and exits, without loading a script:
+
+```
+AutoHotkey64.exe /dump-api
+```
+
+```
+# name<TAB>min<TAB>max<TAB>variadic<TAB>outputs
+# max is '*' when the function is variadic
+Abs<TAB>1<TAB><TAB>0<TAB>
+...
+
+# typed functions (lib/functions.h)
+# name<TAB>return<TAB>args (comma separated, in order)
+StrLen<TAB>IntPtr<TAB>String
+...
+```
+
+Two generators consume this, and both are run for you:
+
+```powershell
+# from upstream sources (cross-checks arity against the running interpreter)
+pwsh -NoProfile -File tools/extract-api-docs.ps1 -OutDir docs/api -Verify -Exe dist/AutoHotkey64.exe
+# from /dump-api output
+pwsh -NoProfile -File tools/gen-builtin-docs.ps1 -Exe dist/AutoHotkey64.exe -OutDir dist
+```
+
+`tools/build.ps1` calls the second one automatically and emits `BUILTIN_API.md`
+and `builtin-api.json` next to the executable, so a downloaded artifact is
+self-describing. CI asserts the dump still reports 357 functions and that the
+three patched functions are present.
+
+The three patched functions are registered through `BIF1` rather than
+declared in `functions.h`, so they have **no source-level parameter names**. Both
+generators carry a small signature table for them; arity is still checked against
+`g_BIF`, so the table cannot silently drift.
 
 ## Repository layout
 
@@ -97,25 +159,32 @@ Normal interactive behaviour is unchanged unless the switch is passed.
 ├── upstream/               git submodule -> AutoHotkey/AutoHotkey (pinned)
 ├── patches/                patch series, applied in filename order
 │   ├── 0001-AutoHotkeyx.vcxproj.patch
-│   ├── 0002-AutoHotkey.cpp.patch
-│   ├── 0003-error.cpp.patch
-│   ├── 0004-lib_http_builtin.cpp.patch
-│   ├── 0005-lib_json_builtin.cpp.patch
-│   ├── 0006-script.cpp.patch
-│   └── 0007-script.h.patch
+│   ├── 0002-AutoHotkey.cpp.patch        also parses /dump-api
+│   ├── 0003-MdFunc.cpp.patch            typed-function table for /dump-api
+│   ├── 0004-error.cpp.patch
+│   ├── 0005-lib_http_builtin.cpp.patch
+│   ├── 0006-lib_json_builtin.cpp.patch
+│   ├── 0007-script.cpp.patch
+│   └── 0008-script.h.patch
 ├── third_party/curl-static/  libcurl headers + libcurl.lib for x64 and x86
 │                             (committed; built by tools/build-libcurl-static.ps1)
 ├── tools/
 │   ├── AhkAi.psm1          run the interpreter with a timeout + real stderr
+│   ├── ConsoleProbe.cs     launch under a real console so output can be read back
 │   ├── apply-patches.ps1   clone/update upstream + apply the series
 │   ├── build-libcurl-static.ps1  build libcurl as a static lib for x64/x86
-│   ├── build.ps1           configure + build with MSBuild
+│   ├── build.ps1           configure + build with MSBuild (+ docs, + console check)
 │   ├── download.ps1        fetch a CI artifact (and optionally smoke-test it)
 │   ├── export-patches.ps1  re-export the series from a working tree
+│   ├── extract-api-docs.ps1    API reference built from upstream sources
+│   ├── gen-builtin-docs.ps1    API reference built from /dump-api at runtime
 │   ├── install-patched.ps1 install this build as the system interpreter
-│   ├── test-noninteractive.ps1
-│   └── test-json-http.ps1
-├── docs/BUILTIN_HTTP_JSON.md
+│   ├── test-console-visibility.ps1  /AI output is visible on a bare console
+│   ├── test-noninteractive.ps1      /AI contract (redirected; bytes only)
+│   └── test-json-http.ps1           JSON + HTTP suites
+├── docs/
+│   ├── BUILTIN_HTTP_JSON.md    hand-written guide to HttpRequest/JsonParse/JsonStringify
+│   └── api/SIGNATURES.md, RUNTIME_API.md, builtin-api.json   generated, do not edit
 ├── UPSTREAM_PIN            the upstream commit the series is based on
 └── .github/workflows/build.yml
 ```
@@ -133,8 +202,10 @@ Warnings do not change the exit code.
 
 ## Download the CI build
 
-The `verify` job runs the smoke test against the freshly built artifact, so a
-green run already proves the `/AI` contract on a clean runner.
+The `verify` job runs the smoke test **and** the console-visibility check against
+the freshly built artifact, so a green run proves the `/AI` contract on a clean
+runner -- including that the diagnostics are actually visible, not merely
+present on a redirected pipe.
 
 ```powershell
 # latest successful run -> ./download, then smoke-test it
@@ -160,13 +231,20 @@ git submodule update --init --recursive
 pwsh -NoProfile -File tools/apply-patches.ps1
 pwsh -NoProfile -File tools/build.ps1 -Configuration Release -Platform x64 -OutDir dist
 pwsh -NoProfile -File tools/test-noninteractive.ps1 -Exe dist/AutoHotkey64.exe
+pwsh -NoProfile -File tools/test-console-visibility.ps1 -Exe dist/AutoHotkey64.exe
 pwsh -NoProfile -File tools/test-json-http.ps1 -Exe dist/AutoHotkey64.exe
 ```
 
 Requires VS 2022 Build Tools with the "Desktop development with C++" workload;
 `tools/build.ps1` locates it via `vswhere` and sources `vcvarsall.bat` itself.
 Output lands in `upstream/bin/AutoHotkey64.exe`; `-OutDir` also copies it to
-`dist/` and asserts the result has no libcurl DLL import.
+`dist/`, asserts the result has no libcurl DLL import, generates the API
+reference, and checks that `/AI` diagnostics are visible on a bare console.
+
+> Build **both** architectures before claiming success. CI has a `Release/Win32`
+> job for good reason: a duplicate-case-label bug in the `/dump-api` type naming
+> (`MdType::UIntPtr` aliases `UInt32` on Win32 and `UInt64` on x64) compiled
+> cleanly for x64 and failed only under Win32.
 
 Regenerating the static libcurl (only needed to bump curl itself):
 
