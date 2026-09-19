@@ -290,3 +290,88 @@ jobs:
       - name: Run JSON suite (offline)
         shell: pwsh
         run: pwsh -NoProfile -File tools/test-json-http.ps1 -Exe dist/AutoHotkey64.exe -SkipHttp
+
+  # The installer needs both architectures in one directory and writes to
+  # Program Files and HKLM, so it gets its own job that runs elevated (the
+  # windows-latest runner is already an administrator).  It is separated from
+  # `verify` so an installer regression cannot mask a binary regression, and so
+  # a failed install cannot leave the verify runner in a modified state.
+  installer:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Download x64 Release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: AutoHotkey64-x64-Release
+          path: dist/x64
+
+      - name: Download Win32 Release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: AutoHotkey32-Win32-Release
+          path: dist/win32
+
+      - name: Assemble both architectures for the installer
+        shell: pwsh
+        run: |
+          # The installer payload needs both interpreters plus the docs in ONE
+          # flat directory.  The two artifacts are downloaded separately, so
+          # flatten them here rather than teaching pack-installer.ps1 about a
+          # per-architecture layout it does not otherwise need.
+          New-Item -ItemType Directory -Path dist/flat -Force | Out-Null
+          Copy-Item dist/x64/*   dist/flat -Force -Recurse
+          Copy-Item dist/win32/* dist/flat -Force -Recurse
+
+          $need = 'AutoHotkey64.exe', 'AutoHotkey32.exe'
+          foreach ($n in $need) {
+            if (-not (Test-Path "dist/flat/$n")) {
+              Write-Output "::error::dist/flat/$n is missing; the installer needs both architectures"
+              Get-ChildItem dist -Recurse | Select-Object FullName
+              exit 1
+            }
+          }
+          Get-ChildItem dist/flat | Select-Object Name, Length
+
+      - name: Pack the installer
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/pack-installer.ps1 -Dist dist/flat -OutFile dist/AHK-v2-Setup.exe
+
+      # install -> assert PATH, association, /dump-api, byte-exact extraction ->
+      # uninstall -> assert full rollback.  This is the only thing that proves
+      # the installer works rather than merely builds.
+      - name: End-to-end install and rollback
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/test-installer.ps1 -Setup dist/AHK-v2-Setup.exe
+
+      # Registry correctness is not the same as the association working, so this
+      # launches a real .ahk through ShellExecute and waits for evidence.
+      - name: Association actually launches a script
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/test-association.ps1 -Setup dist/AHK-v2-Setup.exe
+
+      - name: Leave the machine clean
+        if: always()
+        shell: pwsh
+        run: |
+          # test-association.ps1 removes its own install in a finally block, but
+          # a hard failure earlier can skip that; make the job idempotent.
+          if (Test-Path 'C:\Program Files\AHK-v2\uninstall.exe') {
+            & 'C:\Program Files\AHK-v2\uninstall.exe' /quiet
+            Start-Sleep -Seconds 5
+          }
+          if (Test-Path 'C:\Program Files\AHK-v2') {
+            Remove-Item 'C:\Program Files\AHK-v2' -Recurse -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Upload the installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: AHK-v2-Setup
+          path: dist/AHK-v2-Setup.exe
+          if-no-files-found: error

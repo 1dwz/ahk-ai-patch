@@ -18,3 +18,6 @@ AutoHotkey<arch>.exe
 BUILTIN_API.md
 builtin-api.json
 BUILTIN_HTTP_JSON.md
+debugging.md
+v2-gotchas.md
+README-AI.md

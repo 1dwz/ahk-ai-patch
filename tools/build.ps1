@@ -141,15 +141,16 @@ if (Test-Path $built) {
         # executable -- otherwise BUILTIN_API.md links to a file the downloader
         # does not have.
         #
-        # Copy the guide FIRST so the generator's -GuideLink can be a verified
-        # sibling filename rather than a guess.
+        # Copy the reference documentation FIRST so the generator's -GuideLink can
+        # be a verified sibling filename rather than a guess, and so everything
+        # named in docs/ARTIFACT_CONTENTS.txt exists before it is checked.
         $guideCopied = $false
-        foreach ($guide in 'BUILTIN_HTTP_JSON.md') {
+        foreach ($guide in 'BUILTIN_HTTP_JSON.md', 'debugging.md', 'v2-gotchas.md', 'README-AI.md') {
             $src = Join-Path $RepoRoot "docs\$guide"
             if (Test-Path $src) {
                 Copy-Item $src (Join-Path $OutDir $guide) -Force
                 Write-Output "Docs    : $guide"
-                $guideCopied = $true
+                if ($guide -eq 'BUILTIN_HTTP_JSON.md') { $guideCopied = $true }
             } else {
                 Write-Warning "hand-written guide missing: $src"
             }
@@ -249,6 +250,30 @@ if (Test-Path $built) {
             } finally {
                 Remove-Item $visLog -Force -ErrorAction SilentlyContinue
             }
+        }
+
+        # The installer needs BOTH architectures in one directory, so it is only
+        # packed when the caller has a directory holding both.  A single-arch CI
+        # build skips this; the dedicated release job runs it instead.
+        $haveBoth = (Test-Path (Join-Path $OutDir 'AutoHotkey64.exe')) -and
+                    (Test-Path (Join-Path $OutDir 'AutoHotkey32.exe'))
+        if ($haveBoth) {
+            $pack = Join-Path $RepoRoot 'tools\pack-installer.ps1'
+            if (Test-Path $pack) {
+                try {
+                    $setup = Join-Path $OutDir 'AHK-v2-Setup.exe'
+                    & $pack -Dist $OutDir -OutFile $setup
+                    if ($LASTEXITCODE -eq 0 -and (Test-Path $setup)) {
+                        Write-Output ("Installer: AHK-v2-Setup.exe ({0:N0} bytes)" -f (Get-Item $setup).Length)
+                    } else {
+                        Write-Warning "installer packing failed ($LASTEXITCODE)"
+                    }
+                } catch {
+                    Write-Warning "installer packing could not run: $($_.Exception.Message)"
+                }
+            }
+        } else {
+            Write-Output 'Installer: skipped (needs both architectures in one output directory)'
         }
     }
 } else {
