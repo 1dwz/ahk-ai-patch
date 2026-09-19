@@ -117,7 +117,12 @@ jobs:
     needs: build
     runs-on: windows-latest
     steps:
+      # The parity check below builds a pristine control from the submodule, so
+      # this job needs the submodule.  (It used to checkout without it -- fine
+      # while verify only consumed the downloaded artifact.)
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Download x64 Release artifact
         uses: actions/download-artifact@v4
@@ -229,10 +234,19 @@ jobs:
         shell: pwsh
         run: |
           $zip = Join-Path $env:RUNNER_TEMP 'pristine.zip'
+          # The pinned commit, straight out of the submodule.  --format=zip avoids
+          # piping git's tar stream, which is fragile on PowerShell.
           git -C upstream archive --format=zip -o $zip HEAD
+          if ($LASTEXITCODE -ne 0) { throw "git archive failed: $LASTEXITCODE" }
           Expand-Archive -Path $zip -DestinationPath pristine-test -Force
+          if (-not (Test-Path 'pristine-test/AutoHotkeyx.sln')) {
+            throw 'pristine-test did not extract (AutoHotkeyx.sln missing)'
+          }
+          # No setup-msbuild needed: build.ps1 locates VS itself via vswhere and
+          # sources vcvarsall.bat, so it behaves the same here as in the build job.
           pwsh -NoProfile -File tools/build.ps1 -UpstreamDir pristine-test `
                -Configuration Release -Platform x64 -OutDir pristine-dist
+          if ($LASTEXITCODE -ne 0) { throw "pristine build failed: $LASTEXITCODE" }
 
       - name: Assert behaviour is unchanged outside the new switches
         shell: pwsh
