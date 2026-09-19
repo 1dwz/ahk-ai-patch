@@ -195,37 +195,58 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File tools/test-console-visibility.ps1 -Exe dist/AutoHotkey64.exe
 
-      # /dump-api is what the documentation generator reads, so a regression in
-      # it silently produces wrong docs.  Assert the registry counts and the
-      # well-known size of the built-in set.
-      - name: Assert /dump-api reports the full built-in API
+      # The API reference is generated from the SOURCE tree, so this asserts the
+      # generator still finds everything it is supposed to: 253 built-ins declared
+      # in source/lib/functions.h plus the 101 registered in g_BIF[], totalling
+      # the well-known 354.  It also proves every emitted signature is source-
+      # derived (no invented parameter names) by re-deriving the name set straight
+      # from the source and diffing.
+      - name: Assert the API reference covers the full built-in set
         shell: pwsh
         run: |
           $expected = 354
-          $out = & dist/AutoHotkey64.exe /dump-api 2>&1 | Out-String
-          if ($LASTEXITCODE -ne 0) {
-            Write-Output "::error::/dump-api exited $LASTEXITCODE"
+          pwsh -NoProfile -File tools/extract-api-docs.ps1 `
+               -Json -OutFile dist/builtin-api.json `
+               -Summary dist/BUILTIN_API.md -OutDir dist/api
+          if ($LASTEXITCODE -ne 0) { throw "generator exited $LASTEXITCODE" }
+
+          $api = Get-Content dist/builtin-api.json -Raw | ConvertFrom-Json
+          Write-Output "functions: $($api.count) ($($api.parameter_names_declared) with declared parameter names, $($api.parameter_names_absent) arity-only)"
+          if ($api.count -ne $expected) {
+            Write-Output "::error::expected $expected built-in functions, got $($api.count)"
             exit 1
           }
-          $names = [regex]::Matches($out, '(?m)^([A-Za-z_][A-Za-z0-9_]*)\t') |
-            ForEach-Object { $_.Groups[1].Value }
-          $unique = @($names | Sort-Object -Unique)
-          Write-Output "functions: $($unique.Count)"
 
-          if ($unique.Count -ne $expected) {
-            Write-Output "::error::expected $expected built-in functions, got $($unique.Count)"
+          # Re-derive the name set from the source, independently of the generator.
+          $fh = Get-Content upstream/source/lib/functions.h -Raw
+          $md = [regex]::Matches($fh, '(?m)^md_func(?:_[a-z]+)?\(\s*([A-Za-z_][A-Za-z0-9_]*)') |
+                ForEach-Object { $_.Groups[1].Value }
+          $sc = Get-Content upstream/source/script.cpp -Raw
+          $bif = [regex]::Matches($sc, '(?m)^\s*BIF[ni1]?\(\s*([A-Za-z_][A-Za-z0-9_]*)') |
+                 ForEach-Object { $_.Groups[1].Value }
+          $fromSource = @($md + $bif | Sort-Object -Unique)
+          $emitted = @($api.functions | ForEach-Object { $_.name } | Sort-Object -Unique)
+          $diff = @(Compare-Object $fromSource $emitted)
+          if ($diff.Count) {
+            Write-Output "::error::generated set differs from the source by $($diff.Count) name(s)"
+            $diff | Select-Object -First 20 | ForEach-Object { Write-Output "  $($_.SideIndicator) $($_.InputObject)" }
             exit 1
           }
-          Write-Output "OK: /dump-api reports $expected functions"
+          Write-Output "OK: $expected functions, name set identical to the source"
 
-      # The check above pipes /dump-api, which hands it a real stdout handle --
-      # so it cannot see that typing the command prints nothing.  /dump-api and
-      # /AI share that blind spot (AutoHotkey.exe is a GUI-subsystem binary and
-      # does not inherit an interactive console), and it was a real bug in both.
-      - name: Assert /dump-api output reaches a bare console
-        shell: pwsh
-        run: pwsh -NoProfile -File tools/test-dump-api-console.ps1 -Exe dist/AutoHotkey64.exe
-
+          # No entry may carry an invented name: a function whose parameter names
+          # are not in the source must report zero parameter names.
+          $invented = @($api.functions | Where-Object { -not $_.parameter_names_declared -and $_.params.Count -gt 0 })
+          if ($invented.Count) {
+            Write-Output "::error::$($invented.Count) arity-only entry(ies) carry invented parameters"
+            exit 1
+          }
+          $placeholders = @($api.functions | ForEach-Object { $_.params } | Where-Object { $_.name -match '^arg\d+$' })
+          if ($placeholders.Count) {
+            Write-Output "::error::$($placeholders.Count) placeholder parameter name(s) present"
+            exit 1
+          }
+          Write-Output "OK: every parameter name is source-declared; none invented"
       # The goal is "/AI only, as close to upstream as possible", so the strongest
       # available claim is that an ORDINARY invocation is byte-identical to
       # stock.  That needs a pristine binary from the same pinned commit, built
@@ -246,13 +267,10 @@ jobs:
           # sources vcvarsall.bat, so it behaves the same here as in the build job.
           #
           # Deliberately NO -OutDir here.  The -OutDir branch of build.ps1 runs
-          # /dump-api, /AI and docs generation against the binary it just built --
-          # correct for the patched exe, but the pristine control does not know
-          # those switches, and would treat /dump-api as a script path, pop a
-          # "Script file not found" dialog and hang a headless runner forever
-          # (observed: 46 min stuck on this step, while the real build takes 41 s
-          # in the build job).  Without -OutDir the build lands in
-          # pristine-test/bin/ and no console checks run; copy it for parity.
+          # the console visibility check against the binary it just built, and a
+          # pristine control is built from the same source but should not be
+          # assumed to have run it.  Without -OutDir the build lands in
+          # pristine-test/bin/; copy it for parity.
           pwsh -NoProfile -File tools/build.ps1 -UpstreamDir pristine-test `
                -Configuration Release -Platform x64
           if ($LASTEXITCODE -ne 0) { throw "pristine build failed: $LASTEXITCODE" }
@@ -330,7 +348,7 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File tools/pack-installer.ps1 -Dist dist/flat -OutFile dist/AHK-v2-Setup.exe
 
-      # install -> assert PATH, association, /dump-api, byte-exact extraction ->
+      # install -> assert PATH, association, patch marker, byte-exact extraction ->
       # uninstall -> assert full rollback.  This is the only thing that proves
       # the installer works rather than merely builds.
       - name: End-to-end install and rollback

@@ -69,79 +69,73 @@ the behaviour falls back to redirect-only, so piping and `2>` still work.
 
 Normal interactive behaviour is unchanged unless the switch is passed.
 
-### 2. Built-in API dump and generated documentation (`/dump-api`)
+### 2. Built-in API reference (generated from source)
 
 Upstream registers its built-in functions in **two disjoint tables**, and neither
 is queryable from a running interpreter:
 
 | Registry | Source | Entries | Carries |
 | --- | --- | --- | --- |
-| `g_BIF[]` | `source/script.cpp` | 101 | arity, variadic flag, output vars — no parameter names |
-| `sMdFunc[]` | `source/MdFunc.cpp` | 253 | full `MdType` argument types and return type |
+| `md_func[]` | `source/lib/functions.h` | 253 | parameter directions, types, **names**, return type |
+| `g_BIF[]` | `source/script.cpp` | 101 | arity, variadic flag, output vars — **no parameter names** |
 
-The sets do not overlap; together they are **354 functions**. `/dump-api` prints
-them and exits, without loading a script:
-```
-AutoHotkey64.exe /dump-api
-```
-
-```
-# name<TAB>min<TAB>max<TAB>variadic<TAB>outputs
-# max is '*' when the function is variadic
-Abs<TAB>1<TAB><TAB>0<TAB>
-...
-
-# typed functions (lib/functions.h)
-# name<TAB>return<TAB>args (comma separated, in order)
-StrLen<TAB>IntPtr<TAB>String
-...
-```
-
-Two generators consume this, and both are run for you:
+The sets do not overlap; together they are **354 functions**. Both are read
+directly out of the source tree -- there is no runtime switch to dump them and
+there is nothing to guess:
 
 ```powershell
-# from upstream sources (cross-checks arity against the running interpreter)
-pwsh -NoProfile -File tools/extract-api-docs.ps1 -OutDir docs/api -Verify -Exe dist/AutoHotkey64.exe
-# from /dump-api output
-pwsh -NoProfile -File tools/gen-builtin-docs.ps1 -Exe dist/AutoHotkey64.exe -OutDir dist
+pwsh -NoProfile -File tools/extract-api-docs.ps1 `
+     -Summary dist/BUILTIN_API.md -Json -OutFile dist/builtin-api.json `
+     -Verify -Exe dist/AutoHotkey64.exe
 ```
 
-`tools/build.ps1` calls the second one automatically and emits `BUILTIN_API.md`
-and `builtin-api.json` next to the executable, so a downloaded artifact is
-self-describing. CI asserts the dump still reports 354 functions.
+`tools/build.ps1` runs it automatically and emits `BUILTIN_API.md` and
+`builtin-api.json` next to the executable, so a downloaded artifact is
+self-describing.
+
+**On the 101 `g_BIF[]` entries.** That table stores a name and an arity only,
+and the implementations take positional arguments (`BIF_DECL(BIF_InStr)`
+reads `aParam[0]`), so **the source tree declares no parameter names for
+them** -- upstream is migrating these to the `md_func` form and the unmigrated
+ones have no names anywhere in the tree. Those entries therefore publish their
+real arity and are marked `[arity only]`. No `arg1, arg2, ...` placeholders are
+invented: once written into a document a placeholder is indistinguishable from
+a real parameter name.
+
+Every generated signature records which table it came from, so the provenance of
+each line is auditable. `-Verify` additionally cross-checks the parsed arity
+against every function in a running interpreter and **fails** on any
+disagreement (min/max params, variadic flag).
 
 
 ```
 .
 ├── upstream/               git submodule -> AutoHotkey/AutoHotkey (pinned)
 ├── patches/                patch series, applied in filename order
-│   ├── 0002-AutoHotkey.cpp.patch        also parses /dump-api
-│   ├── 0003-MdFunc.cpp.patch            typed-function table for /dump-api
+│   ├── 0002-AutoHotkey.cpp.patch        parses /AI and /NonInteractive
 │   ├── 0004-error.cpp.patch
 │   ├── 0007-script.cpp.patch
 │   └── 0008-script.h.patch
 ├── tools/
-│   ├── AhkAi.psm1          run the interpreter with a timeout + real stderr
+│   ├── AhkAi.psm1          run the interpreter with a timeout + real stderr;
+│   │                       Test-AhkPatchedBuild (static patch-marker scan)
 │   ├── ConsoleProbe.cs     launch under a real console so output can be read back
 │   ├── apply-patches.ps1   clone/update upstream + apply the series
 │   ├── build.ps1           configure + build with MSBuild (+ docs, + console check)
 │   ├── download.ps1        fetch a CI artifact (and optionally smoke-test it)
 │   ├── export-patches.ps1  re-export the series from a working tree
-│   ├── extract-api-docs.ps1    API reference built from upstream sources
-│   ├── gen-builtin-docs.ps1    API reference built from /dump-api at runtime
+│   ├── extract-api-docs.ps1    API reference built from the upstream source tree
 │   ├── install-patched.ps1 install this build as the system interpreter
 │   ├── test-console-visibility.ps1  /AI output is visible on a bare console
 │   ├── test-noninteractive.ps1      /AI contract (redirected; bytes only)
-│   ├── test-dump-api-console.ps1    /dump-api output reaches a real console
-│   ├── DumpApiConsoleProbe.cs       launches it under a console it owns
 │   ├── test-parity.ps1              behaviour matches stock outside the switches
 │   ├── test-installer.ps1           install/uninstall round-trip
-│   └── test-system-interpreter.ps1  the installed interpreter honours /AI
+│   └── test-system-interpreter.ps1  the installed interpreter is the patched one
 ├── docs/
 │   ├── debugging.md            how to run scripts so errors are visible
 │   ├── v2-gotchas.md           v2 traps worth knowing in advance
 │   ├── README-AI.md            artifact contents and the /AI contract
-│   └── api/SIGNATURES.md, RUNTIME_API.md, builtin-api.json   generated, do not edit
+│   └── api/SIGNATURES.md   generated from source, do not edit
 ├── UPSTREAM_PIN            the upstream commit the series is based on
 └── .github/workflows/build.yml
 ```
@@ -186,21 +180,20 @@ Available artifacts: `AutoHotkey64-x64-Release`, `AutoHotkey32-Win32-Release`,
 ```powershell
 git submodule update --init --recursive
 pwsh -NoProfile -File tools/apply-patches.ps1
-pwsh -pwsh -NoProfile -File tools/test-noninteractive.ps1 -Exe dist/AutoHotkey64.exe
+pwsh -NoProfile -File tools/test-noninteractive.ps1 -Exe dist/AutoHotkey64.exe
 pwsh -NoProfile -File tools/test-console-visibility.ps1 -Exe dist/AutoHotkey64.exe
-pwsh -NoProfile -File tools/test-dump-api-console.ps1 -Exe dist/AutoHotkey64.exe
 ```
 
 Requires VS 2022 Build Tools with the "Desktop development with C++" workload;
 `tools/build.ps1` locates it via `vswhere` and sources `vcvarsall.bat` itself.
 Output lands in `upstream/bin/AutoHotkey64.exe`; `-OutDir` also copies it to
-`dist/`, generates the API reference, and checks that **both** `/AI` diagnostics
-and the `/dump-api` table are visible on a bare console.
+`dist/`, generates the API reference from the source tree, and checks that the
+`/AI` diagnostics are visible on a bare console.
 
 > Build **both** architectures before claiming success, then repack the installer.
-> CI has a `Release/Win32` job for good reason: a duplicate-case-label bug in the
-> `/dump-api` type naming (`MdType::UIntPtr` aliases `UInt32` on Win32 and
-> `UInt64` on x64) compiled cleanly for x64 and failed only under Win32.
+> CI has a `Release/Win32` job for good reason: a 32/64-bit difference in type
+> aliasing (`UIntPtr` is `UInt32` on Win32 and `UInt64` on x64) once compiled
+> cleanly for x64 and failed only under Win32.
 
 ### Proving the result is still stock in every other respect
 

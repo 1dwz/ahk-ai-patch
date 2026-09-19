@@ -1,5 +1,5 @@
 diff --git a/source/AutoHotkey.cpp b/source/AutoHotkey.cpp
-index 02936c36..907460e1 100644
+index 02936c36..aa361a9b 100644
 --- a/source/AutoHotkey.cpp
 +++ b/source/AutoHotkey.cpp
 @@ -1,4 +1,4 @@
@@ -8,177 +8,7 @@ index 02936c36..907460e1 100644
  AutoHotkey
  
  Copyright 2003-2009 Chris Mallett (support@autohotkey.com)
-@@ -32,6 +32,9 @@ ResultType InitForExecution();
- ResultType ParseCmdLineArgs(LPTSTR &script_filespec);
- ResultType CheckPriorInstance();
- int MainExecuteScript(bool aMsgSleep = true);
-+// ahk-ai patch: /dump-api support; defined below so it can be called while
-+// walking argv, before any script is loaded.
-+void DumpBuiltinApi();
- 
- 
- // Performs any initialization that should be done before LoadFromFile().
-@@ -71,6 +74,143 @@ void EarlyAppInit()
- }
- 
- 
-+// ahk-ai patch: emit the built-in function table in a stable, line-oriented
-+// format and exit.  One record per line, tab separated:
-+//
-+//   NAME <tab> MIN <tab> MAX <tab> VARIADIC <tab> OUTPUTS
-+//
-+// MAX is reported as "variadic" when the function accepts unlimited
-+// arguments, and OUTPUTS is a comma-separated list of 1-based parameter
-+// indices that are output variables (empty when there are none).  This mirrors
-+// what the interpreter itself enforces, because it is read from the same
-+// g_BIF table that Script::GetBuiltInFunc() searches.
-+//
-+// Deliberately writes ANSI/UTF-8 bytes straight to the standard handle rather
-+// than going through the script's own diagnostic machinery: /dump-api must
-+// work before any script is loaded, and its output is meant to be parsed.
-+void DumpBuiltinApi()
-+{
-+	// AutoHotkey.exe is a Windows-GUI-subsystem binary, so when it is started
-+	// from a console without redirection it does NOT inherit that console and
-+	// GetStdHandle(STD_OUTPUT_HANDLE) is NULL -- the dump was silently dropped in
-+	// exactly the case a user hits by typing the command.  /AI handles this with
-+	// AttachConsole; do the same here, since DumpBuiltinApi runs before any
-+	// script is loaded and so cannot borrow the script's diagnostics path.
-+	//
-+	// This must run BEFORE the handle is fetched: AttachConsole sets the standard
-+	// handles up for the newly attached console, so a handle read beforehand
-+	// would still be the stale NULL.  Both calls fail harmlessly (return 0) when
-+	// there is no parent console -- under a service or a GUI launcher -- and
-+	// neither disturbs an already-valid redirected handle, which is why piping
-+	// and `> file` kept working all along.
-+	if (!AttachConsole(ATTACH_PARENT_PROCESS))
-+	{
-+		// Fall back to the console of this process, if any.
-+		AttachConsole(GetCurrentProcessId());
-+	}
-+
-+	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-+	if (hOut == INVALID_HANDLE_VALUE || hOut == nullptr)
-+		return;
-+
-+	// Set to UTF-8 so function names and any future descriptions survive
-+	// redirection into a file on any system codepage.
-+	SetConsoleOutputCP(CP_UTF8);
-+
-+	// CStringA holds bytes; each piece is converted from the TCHAR source with
-+	// CStringUTF8FromWChar (the only UTF-8-producing type in StringConv.h).
-+	// The literals must be _T() since TCHAR is wchar_t in a Unicode build.
-+	CStringA buffer;
-+	{
-+		CStringUTF8FromWChar u(_T("# AutoHotkey built-in functions\n"));
-+		buffer.Append(u);
-+	}
-+	{
-+		CStringUTF8FromWChar u(_T("# name\tmin\tmax\tvariadic\toutputs\n"));
-+		buffer.Append(u);
-+		CStringUTF8FromWChar u2(_T("# max is '*' when the function is variadic\n"));
-+		buffer.Append(u2);
-+	}
-+
-+	int count = Script::BuiltinApiCount();
-+	for (int i = 0; i < count; ++i)
-+	{
-+		const BuiltinApiFunc &e = Script::BuiltinApiAt(i);
-+
-+		CStringUTF8FromWChar uName(e.name);
-+		char line[512];
-+		sprintf(line, "%s\t%d\t%s\t%d\t", uName.GetString(), e.minParams
-+			, e.variadic ? "*" : ""
-+			, e.variadic ? 1 : 0);
-+		buffer.Append(line);
-+
-+		// mOutputVars is a zero-terminated list of 1-based indices.
-+		for (int v = 0; v < e.outputCount; ++v)
-+		{
-+			char num[16];
-+			sprintf(num, v ? ",%d" : "%d", (int)e.outputs[v]);
-+			buffer.Append(num);
-+		}
-+		buffer.Append("\n");
-+	}
-+
-+	// Second section: the typed registry from lib/functions.h.  This is where
-+	// the argument types live, so it is what lets a caller build a correct
-+	// call instead of guessing from the parameter count.
-+	{
-+		CStringUTF8FromWChar u(_T("\n# typed functions (lib/functions.h)\n"));
-+		buffer.Append(u);
-+		CStringUTF8FromWChar u2(_T("# name\treturn\targs (comma separated, in order)\n"));
-+		buffer.Append(u2);
-+	}
-+
-+	int mdCount = Script::MdFuncApiCount();
-+	for (int i = 0; i < mdCount; ++i)
-+	{
-+		int argCount = 0, retType = 0;
-+		int *argTypes = nullptr;
-+		LPCTSTR name = Script::MdFuncApiAt(i, argCount, argTypes, retType);
-+		CStringUTF8FromWChar uName(name);
-+
-+		char line[4096];
-+		sprintf(line, "%s\t", uName.GetString());
-+		buffer.Append(line);
-+
-+		// Render one parameter per argument.  argtype[] stores modifiers as
-+		// separate elements that apply to the *next* type, so they are
-+		// accumulated and merged here -- otherwise the output reads
-+		// "In_Opt, In String" instead of "In_Opt String", which is not how
-+		// the source spells it and would mislead a reader.
-+		bool first = true;
-+		CStringA pending;
-+		for (int a = 0; a < argCount; ++a)
-+		{
-+			int code = argTypes[a];
-+			// Modifiers are >= MdType::FirstModifier (Optional = 0x80).
-+			if (code >= (int)0x80)
-+			{
-+				CStringUTF8FromWChar uMod(Script::MdTypeToString(code));
-+				if (pending.GetLength())
-+					pending.Append("_");
-+				pending.Append(uMod.GetString());
-+				continue;
-+			}
-+			CStringUTF8FromWChar uType(Script::MdTypeToString(code));
-+			sprintf(line, "%s%s%s", first ? "" : ", ", pending.GetString()
-+				, pending.GetLength() ? " " : "");
-+			buffer.Append(line);
-+			buffer.Append(uType.GetString());
-+			pending.Empty();
-+			first = false;
-+		}
-+		buffer.Append("\n");
-+	}
-+
-+	DWORD written = 0;
-+	WriteFile(hOut, buffer.GetString(), (DWORD)buffer.GetLength(), &written, nullptr);
-+}
-+
-+
- int WINAPI _tWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
- {
- 	g_hInstance = hInstance;
-@@ -78,7 +218,14 @@ int WINAPI _tWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmd
- 	EarlyAppInit();
- 
- 	LPTSTR script_filespec; // Script path as originally specified, or NULL if omitted/defaulted.
--	if (!ParseCmdLineArgs(script_filespec))
-+	// ahk-ai patch: /dump-api does its work inside ParseCmdLineArgs and returns
-+	// EARLY_EXIT.  That is a distinct value from FAIL, so it must be handled
-+	// explicitly here -- otherwise execution falls through to LoadFromFile and
-+	// the interpreter tries to run a script that was never given.
-+	ResultType parse_result = ParseCmdLineArgs(script_filespec);
-+	if (parse_result == EARLY_EXIT)
-+		return 0;
-+	if (!parse_result)
- 		return CRITICAL_ERROR;
- 
- 	UINT load_result = g_script.LoadFromFile(script_filespec);
-@@ -130,6 +277,25 @@ ResultType ParseCmdLineArgs(LPTSTR &script_filespec)
+@@ -130,6 +130,25 @@ ResultType ParseCmdLineArgs(LPTSTR &script_filespec)
  			g_script.mIsRestart = true;
  		else if (!_tcsicmp(param, _T("/force")))
  			g_ForceLaunch = true;
@@ -204,23 +34,7 @@ index 02936c36..907460e1 100644
  #ifndef AUTOHOTKEYSC // i.e. the following switch is recognized only by AutoHotkey.exe (especially since recognizing new switches in compiled scripts can break them, unlike AutoHotkey.exe).
  		else if (!_tcsicmp(param, _T("/script")))
  			script_filespec = NULL; // Override compiled script mode, otherwise no effect.
-@@ -147,6 +313,15 @@ ResultType ParseCmdLineArgs(LPTSTR &script_filespec)
- 		}
- 		else if (!_tcsicmp(param, _T("/validate")))
- 			g_script.mValidateThenExit = true;
-+		// ahk-ai patch: print the built-in function table and exit, so a tool or
-+		// an AI can discover the exact API of this particular build without
-+		// parsing source.  Handled inside the argv loop because it must respond
-+		// to the switch exactly like /validate does.
-+		else if (!_tcsicmp(param, _T("/dump-api")))
-+		{
-+			DumpBuiltinApi();
-+			return EARLY_EXIT;
-+		}
- 		// DEPRECATED: /iLib
- 		else if (!_tcsicmp(param, _T("/iLib"))) // v1.0.47: Build an include-file so that ahk2exe can include library functions called by the script.
- 		{
-@@ -221,10 +396,20 @@ ResultType CheckPriorInstance()
+@@ -221,10 +240,20 @@ ResultType CheckPriorInstance()
  			if (g_AllowOnlyOneInstance == SINGLE_INSTANCE_IGNORE)
  				return EARLY_EXIT;
  			if (g_AllowOnlyOneInstance != SINGLE_INSTANCE_REPLACE)
@@ -241,7 +55,7 @@ index 02936c36..907460e1 100644
  			// Otherwise:
  			reason_to_close_prior = AHK_EXIT_BY_SINGLEINSTANCE;
  		}
-@@ -255,6 +440,11 @@ ResultType CheckPriorInstance()
+@@ -255,6 +284,11 @@ ResultType CheckPriorInstance()
  				// This can happen if the previous instance has an OnExit function that takes a long
  				// time to finish, or if it's waiting for a network drive to timeout or some other
  				// operation in which it's thread is occupied.

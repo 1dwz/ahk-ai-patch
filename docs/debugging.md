@@ -58,15 +58,11 @@ Started from a terminal without redirection it has no console attached, so
 output goes nowhere and you see **nothing at all** -- while the process still
 exits 0, which makes it look like the program simply printed nothing.
 
-This bit **both** switches, not just one:
+This affects `/AI` in particular:
 
 - `/AI` exports diagnostics to stderr, and the build here calls
   `AttachConsole(ATTACH_PARENT_PROCESS)` so the text does appear in the terminal
   you launched it from.
-- `/dump-api` writes to **stdout** and is not routed through the diagnostics path
-  (`DumpBuiltinApi` runs before any script is loaded), so it needs its own
-  `AttachConsole`. Without it, piping worked and typing the command printed
-  nothing.
 
 Two consequences worth remembering:
 
@@ -75,14 +71,22 @@ Two consequences worth remembering:
   work because the redirection hands over a real pipe handle -- which can mask
   the problem entirely.
 - **A test that redirects proves the bytes exist, not that anyone can see
-  them.** `Invoke-AhkAi` and every `2>&1` capture fall in this category, and that
-  is exactly why `/dump-api` shipped broken: every automated check piped it. To
-  verify visibility you must own a console. The harnesses are
-  `tools\test-console-visibility.ps1` (stderr) and
-  `tools\test-dump-api-console.ps1` (stdout); both launch the subject under a
-  console they allocate and read the screen buffer back, and both self-check the
-  read-back with a sentinel so "nothing printed" cannot be mistaken for "the
-  reader is broken".
+  them.** `Invoke-AhkAi` and every `2>&1` capture fall in this category. To
+  verify visibility you must own a console. The harness is
+  `tools\test-console-visibility.ps1`; it launches the subject under a console it
+  allocates and reads the screen buffer back, and self-checks the read-back with
+  a sentinel so "nothing printed" cannot be mistaken for "the reader is broken".
+
+## Do not execute a binary to find out which build it is
+
+A stock interpreter does not know the new switch, so it treats the switch itself
+as the script path, fails to find that file, and raises a **modal dialog** that no
+amount of redirection can suppress -- `MsgBox` is a window, not console output.
+An automated run would then sit behind that window until a timeout kills it.
+
+Identity is therefore checked **statically**, by scanning the file for the wide
+literal `/NonInteractive` that every `/AI` build contains and stock does not
+(`AhkAi.psm1`'s `Test-AhkPatchedBuild`, and the equivalent in `AhkSetup.cs`).
 
 ## Running a script safely
 

@@ -1,29 +1,48 @@
 #requires -Version 5.1
 <#
-Extract built-in function signatures from the AutoHotkey source into Markdown.
+Generate the built-in function reference from the AutoHotkey SOURCE tree.
 
-The authoritative source is source/lib/functions.h: every built-in function is
-declared there with its parameter directions, types and names plus its return
-type, in a machine-readable macro form:
+Everything this script prints is read out of source files.  Nothing is inferred
+from documentation, from the running binary, or from prior knowledge of what a
+function "should" look like.
 
-    md_func(WinWait, (In_Opt, Variant, WinTitle), ..., (Ret, UInt32, Hwnd))
+There are two declaration mechanisms in this upstream revision, and they are
+DISJOINT -- 253 + 101 = the full 354 built-ins:
 
-This script turns that into reference documentation. It does not guess: the
-macro bodies in source/MdType.h define the exact meaning of every field, and
-the `MD_*` argument-list aliases at the top of functions.h are expanded so the
-generated signature lists real parameters rather than a macro name.
+  1. source/lib/functions.h -- 253 entries, via
+         md_func(ControlSend, (In, String, Keys), MD_CONTROL_ARGS_OPT)
+     The macro carries direction, type and NAME for every parameter, plus the
+     return type.  These entries get complete signatures.
 
-Beyond the source, the script can cross-check its own output against a live
-interpreter. AutoHotkey exposes MinParams / MaxParams / IsVariadic on every
-built-in function object, so those are ground truth for arity. If the parsed
-arity ever disagrees with the running build, the script fails -- which is what
-keeps this documentation honest across upstream bumps.
+  2. g_BIF[] in source/script.cpp -- 101 entries, via
+         BIF1(InStr, 2, 5)
+     FuncEntry holds only { name, impl, minParams, maxParams }.  The parameter
+     names do not exist in this source tree: the implementations take positional
+     arguments (BIF_DECL(BIF_InStr) { _f_param_string(haystack, 0, ...) } -- and
+     `haystack` there is a local, not a parameter name).
+
+     Upstream is migrating these from the old style to the new md_func/bif_impl
+     style; the ones not yet migrated have no declared parameter names anywhere
+     in the tree.  Verified by exhaustive search (functions.h, every bif_impl
+     declaration, `// Name(...)` comments, and every file in the repository).
+
+     This script therefore reports their ARITY -- which is real, from source --
+     and states plainly that parameter names are not declared.  It does NOT
+     invent `arg1, arg2, ...` placeholders, because a placeholder in a reference
+     document is indistinguishable from a real name to a reader or an agent.
+
+Every generated entry records which of the two sources it came from, so the
+provenance of each signature is auditable.
+
+AutoHotkey exposes MinParams / MaxParams / IsVariadic on every built-in function
+object, so with -Verify the parsed arity is cross-checked against the running
+interpreter.  A disagreement is an error, not a warning.
 
 Usage:
   pwsh -NoProfile -File tools/extract-api-docs.ps1
   pwsh -NoProfile -File tools/extract-api-docs.ps1 -OutDir docs/api
+  pwsh -NoProfile -File tools/extract-api-docs.ps1 -Summary dist/BUILTIN_API.md -Json dist/builtin-api.json
   pwsh -NoProfile -File tools/extract-api-docs.ps1 -Verify -Exe dist/AutoHotkey64.exe
-  pwsh -NoProfile -File tools/extract-api-docs.ps1 -Json -OutFile dist/api.json
 #>
 [CmdletBinding()]
 param(
@@ -82,11 +101,12 @@ function Expand-AliasGroups([string]$s, [int]$depth = 0) {
 }
 
 # --- read the g_BIF registry from script.cpp -------------------------------
-# functions.h declares parameter types, but not every built-in appears there:
-# the `g_BIF[]` table in script.cpp is the definitive runtime list, and it is
-# where a function compiled in under an #ifdef (or added by a patch) shows up.
-# Each row is BIF1(Name, minp, maxp) or BIFn(Name, minp, maxp, Impl) -- the two
-# numbers are the interpreter's own MinParams/MaxParams for that function.
+# Each row is BIF1(Name, minp, maxp) or BIFn(Name, minp, maxp, Impl) or
+# BIFi(Name, minp, maxp, Impl, id, ...).  The two numbers are the interpreter's
+# own MinParams/MaxParams; NA means variadic (MAX_FUNCTION_PARAMS).
+# The macros (script.cpp) show exactly what is stored:
+#     #define BIFn(name, minp, maxp, bif, ...) {_T(#name), bif, minp, maxp, FID_##name, __VA_ARGS__}
+# i.e. name, impl, min, max -- no parameter names.
 $gBif = @{}
 $scriptText = ([System.IO.File]::ReadAllText($scriptCpp)) -replace "`r`n", "`n"
 foreach ($m in [regex]::Matches($scriptText, '(?m)^\s*BIF[ni1]?\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*(\d+)\s*,\s*(\d+|NA)\s*')) {
@@ -102,8 +122,6 @@ foreach ($m in [regex]::Matches($scriptText, '(?m)^\s*BIF[ni1]?\(\s*([A-Za-z_][A
 # meaningless), and may be wrapped in #ifdef. Track the condition so that
 # optionally-compiled entries can be flagged rather than silently included.
 $entries = New-Object System.Collections.Generic.List[object]
-$current = ''
-$condStack = New-Object System.Collections.Generic.List[string]
 
 # Split the text into declarations by scanning for `md_func` and then reading
 # forward to the paren that balances the opening one. A regex lookahead is not
@@ -199,10 +217,7 @@ foreach ($d in $decls) {
     #     occupy a positional slot
     #   - Max is the number of counted parameters
     #   - Min advances to the count after every non-optional parameter, so it
-    #     ends up as one past the LAST required parameter. ControlGetPos is the
-    #     clear case: four Out_Opt params, then a required Control, then
-    #     optional window params, giving Min=5 / Max=9 -- verified against the
-    #     interpreter, and `ControlGetPos("Button1")` is rejected at run time.
+    #     ends up as one past the LAST required parameter.
     $min = 0
     $pc = 0
     foreach ($p in $parsed) {
@@ -211,34 +226,41 @@ foreach ($d in $decls) {
     }
     $max = $pc
 
-    # If g_BIF lists this function, trust the interpreter's own numbers: they
-    # are what a script actually sees, and they cover anything the declaration
-    # above could not express.
-    if ($gBif.ContainsKey($name)) {
+    # If g_BIF also lists this function, trust the interpreter's own numbers.
+    # (In this revision the two tables are disjoint, so this normally does not
+    # fire for md_func entries; it is kept because upstream is mid-migration and
+    # a name may appear in both during the transition.)
+    $fromGBif = $gBif.ContainsKey($name)
+    $variadic = $false
+    if ($fromGBif) {
         $min = $gBif[$name].Min
         $max = $gBif[$name].Max
+        $variadic = $gBif[$name].Variadic
     }
 
     $entries.Add([pscustomobject]@{
-        Name       = $name
-        Variant    = $variant
-        ReturnType = $retType
-        ReturnName = $retName
-        Params     = $parsed
-        Min        = $min
-        Max        = $max
-        Condition  = $cond
+        Name            = $name
+        Variant         = $variant
+        ReturnType      = $retType
+        ReturnName      = $retName
+        Params          = $parsed
+        Min             = $min
+        Max             = $max
+        Variadic        = $variadic
+        Condition       = $cond
+        DeclaredIn      = 'source/lib/functions.h'
+        NamesDeclared   = $true
         # md_func_v marks a function shaped like a bare statement (it returns
         # the previous setting), which is worth surfacing in the docs.
-        Statement  = ($variant -eq 'v')
+        Statement       = ($variant -eq 'v')
+        RegisteredOnly  = $false
     })
 }
 
-$entries = @($entries | Sort-Object Name)
-
 # --- include built-ins that only exist in g_BIF ----------------------------
-# Not every built-in is declared in functions.h; some exist only as a BIF row
-# in script.cpp, so they would otherwise be missing from the reference.
+# These have no declaration in functions.h at all, so source gives their name
+# and arity and nothing else.  Recorded as such rather than padded out with
+# invented parameter names.
 $declared = @{}
 foreach ($e in $entries) { $declared[$e.Name] = $true }
 
@@ -248,17 +270,19 @@ foreach ($name in ($gBif.Keys | Sort-Object)) {
     $g = $gBif[$name]
 
     $extra += [pscustomobject]@{
-        Name           = $name
-        Variant        = 'func'
-        ReturnType     = $null
-        ReturnName     = $null
-        Params         = @()
-        Min            = $g.Min
-        Max            = $g.Max
-        Condition      = $null
-        Statement      = $false
-        Variadic       = $g.Variadic
-        RegisteredOnly = $true
+        Name            = $name
+        Variant         = 'func'
+        ReturnType      = $null
+        ReturnName      = $null
+        Params          = @()
+        Min             = $g.Min
+        Max             = $g.Max
+        Variadic        = $g.Variadic
+        Condition       = $null
+        DeclaredIn      = 'g_BIF (source/script.cpp)'
+        NamesDeclared   = $false
+        Statement       = $false
+        RegisteredOnly  = $true
     }
 }
 if ($extra.Count) {
@@ -271,16 +295,23 @@ if ($extra.Count) {
     $entries = @($merged | Sort-Object Name)
 }
 
+$entryCount   = @($entries).Count
+$namedCount   = @($entries | Where-Object { $_.NamesDeclared }).Count
+$arityOnly    = @($entries | Where-Object { -not $_.NamesDeclared }).Count
+
 # --- render ---------------------------------------------------------------
+function Get-ArityText($e) {
+    if ($e.Variadic) { return "$($e.Min) or more arguments" }
+    if ($e.Min -eq $e.Max) { return "$($e.Min) argument(s)" }
+    return "$($e.Min) to $($e.Max) arguments"
+}
+
 function Format-Signature($e) {
-    if ($e.RegisteredOnly) {
-        # Known only from g_BIF, which records arity but no parameter names.
+    if (-not $e.NamesDeclared) {
+        # The source declares no parameter names for this function, so none are
+        # printed.  A placeholder such as `arg1` would read as a real name.
         $ret = if ($e.ReturnType) { "  -> $($e.ReturnType)" } else { '' }
-        $parts = @()
-        for ($i = 0; $i -lt $e.Max; $i++) {
-            if ($i -lt $e.Min) { $parts += "arg$($i + 1)" } else { $parts += "[, arg$($i + 1)]" }
-        }
-        return "$($e.Name)(" + ($parts -join ', ') + ")$ret"
+        return "$($e.Name)(<$(Get-ArityText $e)>)$ret"
     }
     $ps = @($e.Params | ForEach-Object {
         $n = $_.Name
@@ -290,37 +321,62 @@ function Format-Signature($e) {
     return "$($e.Name)(" + ($ps -join ', ') + ")$ret"
 }
 
+function Get-ProvenanceNote {
+    param($Entries, [int]$Named, [int]$Total)
+    $sb = New-Object System.Text.StringBuilder
+    [void]$sb.AppendLine("$Total built-in function(s) are declared in this source tree.")
+    [void]$sb.AppendLine()
+    [void]$sb.AppendLine("- **$Named** carry full signatures (directions, types, parameter names,")
+    [void]$sb.AppendLine('  return type), declared with the `md_func` family of macros in')
+    [void]$sb.AppendLine('  `source/lib/functions.h`.')
+    [void]$sb.AppendLine("- **$($Total - $Named)** are registered in the `g_BIF[]` table in")
+    [void]$sb.AppendLine('  `source/script.cpp`, which stores only a name and an arity. Their')
+    [void]$sb.AppendLine('  implementations take positional arguments, so **this source tree does')
+    [void]$sb.AppendLine('  not declare their parameter names**; upstream is migrating them to the')
+    [void]$sb.AppendLine('  `md_func` form and the rest have no names here to read. Those entries')
+    [void]$sb.AppendLine('  show their real arity and are marked `[arity only]`. No placeholder')
+    [void]$sb.AppendLine('  names are invented, because a placeholder is indistinguishable from a')
+    [void]$sb.AppendLine('  real parameter name once it is in a document.')
+    [void]$sb.AppendLine()
+    return $sb.ToString()
+}
+
 function Get-Summary {
-    param($Entries)
+    param($Entries, [int]$Named, [int]$Total)
     $sb = New-Object System.Text.StringBuilder
     [void]$sb.AppendLine('# Built-in function signatures')
     [void]$sb.AppendLine()
-    [void]$sb.AppendLine("Extracted from ``source/lib/functions.h`` -- the authoritative declaration of")
-    [void]$sb.AppendLine('every built-in function, its parameter directions/types/names and its return type.')
+    [void]$sb.AppendLine('Generated from the AutoHotkey source tree -- `source/lib/functions.h` and')
+    [void]$sb.AppendLine('the `g_BIF[]` registry in `source/script.cpp`. Every line below is read out')
+    [void]$sb.AppendLine('of those files; nothing is taken from documentation or from memory.')
     [void]$sb.AppendLine()
-    [void]$sb.AppendLine("$($Entries.Count) functions. ``[, x]`` marks an optional parameter.")
+    [void]$sb.Append((Get-ProvenanceNote -Entries $Entries -Named $Named -Total $Total))
+    [void]$sb.AppendLine("$Total functions. ``[, x]`` marks an optional parameter. ``[arity only]``")
+    [void]$sb.AppendLine('marks a function whose parameter names are not declared in the source.')
     [void]$sb.AppendLine()
     if ($aliasNote) {
         [void]$sb.AppendLine("Argument-group macros expanded: ``$aliasNote``.")
         [void]$sb.AppendLine()
     }
-    [void]$sb.AppendLine('| Function | Signature |')
-    [void]$sb.AppendLine('| --- | --- |')
+    [void]$sb.AppendLine('| Function | Signature | Source |')
+    [void]$sb.AppendLine('| --- | --- | --- |')
     foreach ($e in $Entries) {
         $sig = (Format-Signature $e) -replace '\|', '\|'
-        [void]$sb.AppendLine("| ``$($e.Name)`` | ``$sig`` |")
+        $prov = if ($e.NamesDeclared) { 'functions.h' } else { 'g_BIF [arity only]' }
+        [void]$sb.AppendLine("| ``$($e.Name)`` | ``$sig`` | $prov |")
     }
     return $sb.ToString()
 }
 
 function Get-FullDoc {
-    param($Entries)
+    param($Entries, [int]$Named, [int]$Total)
     $sb = New-Object System.Text.StringBuilder
     [void]$sb.AppendLine('# Built-in function reference')
     [void]$sb.AppendLine()
-    [void]$sb.AppendLine('Generated from `source/lib/functions.h`. Do not edit by hand --')
+    [void]$sb.AppendLine('Generated from the AutoHotkey source tree. Do not edit by hand --')
     [void]$sb.AppendLine('regenerate with `pwsh -NoProfile -File tools/extract-api-docs.ps1`.')
     [void]$sb.AppendLine()
+    [void]$sb.Append((Get-ProvenanceNote -Entries $Entries -Named $Named -Total $Total))
     [void]$sb.AppendLine('`In` = required, `In_Opt` = optional, `Out*` = by-reference output,')
     [void]$sb.AppendLine('`Ret` = return value. Types are the native declarations, which map to AHK')
     [void]$sb.AppendLine('v2 values as: `String` -> String, `Int32`/`Int64`/`UInt32`/`IntPtr` -> Integer,')
@@ -346,10 +402,12 @@ function Get-FullDoc {
             if ($e.Condition) { $facts += "only built when ``$($e.Condition)``" }
             [void]$sb.AppendLine(($facts -join '; ') + '.')
             [void]$sb.AppendLine()
-            if ($e.RegisteredOnly) {
-                [void]$sb.AppendLine('Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in')
-                [void]$sb.AppendLine('``functions.h``, so its parameter names are not available from source.')
-                [void]$sb.AppendLine('See the hand-written notes in the repository ``docs/`` for its options.')
+            if (-not $e.NamesDeclared) {
+                [void]$sb.AppendLine('Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name')
+                [void]$sb.AppendLine('and an arity only, and the implementation takes positional arguments, so')
+                [void]$sb.AppendLine('**this source tree declares no parameter names for it**. Upstream is')
+                [void]$sb.AppendLine('migrating built-ins to the ``md_func`` form; until this one is migrated')
+                [void]$sb.AppendLine('there are no names to publish, and none are invented here.')
                 [void]$sb.AppendLine()
             }
             elseif ($e.Params.Count) {
@@ -442,24 +500,36 @@ function Invoke-Verify {
     Write-Output 'verify   : OK - parsed arity matches the running interpreter'
 }
 
+function Write-Lf([string]$path, [string]$content) {
+    $dir = Split-Path -Parent $path
+    if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+    [System.IO.File]::WriteAllText($path, ($content -replace "`r`n", "`n"), (New-Object System.Text.UTF8Encoding($false)))
+}
+
 # --- emit ------------------------------------------------------------------
 Write-Output "source   : $functionsH"
-Write-Output "functions: $($entries.Count)"
+Write-Output "functions: $entryCount ($namedCount with declared parameter names, $arityOnly arity-only)"
 if ($aliasNote) { Write-Output "aliases  : $aliasNote" }
 
 if ($Json) {
-    $jsonOut = if ($OutFile) { $OutFile } else { Join-Path $RepoRoot 'dist\api.json' }
-    $dir = Split-Path -Parent $jsonOut
-    if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+    $jsonOut = if ($OutFile) { $OutFile } else { Join-Path $RepoRoot 'dist\builtin-api.json' }
     $payload = [pscustomobject]@{
-        generated_from = 'upstream/source/lib/functions.h'
-        count          = $entries.Count
+        generated_from = 'upstream/source (source/lib/functions.h + g_BIF[] in source/script.cpp)'
+        count          = $entryCount
+        parameter_names_declared = $namedCount
+        parameter_names_absent   = $arityOnly
         functions      = @($entries | ForEach-Object {
             [pscustomobject]@{
                 name        = $_.Name
+                declared_in = $_.DeclaredIn
+                # False means the source declares no names for this function
+                # (g_BIF stores arity only); the params array is then empty and
+                # the signature shows the arity instead of invented names.
+                parameter_names_declared = $_.NamesDeclared
                 return_type = $_.ReturnType
                 min_params  = $_.Min
                 max_params  = $_.Max
+                variadic    = [bool]$_.Variadic
                 signature   = Format-Signature $_
                 condition   = $_.Condition
                 params      = @($_.Params | ForEach-Object {
@@ -469,21 +539,18 @@ if ($Json) {
         })
     }
     $jsonText = $payload | ConvertTo-Json -Depth 8
-    [System.IO.File]::WriteAllText($jsonOut, ($jsonText -replace "`r`n", "`n"), (New-Object System.Text.UTF8Encoding($false)))
+    Write-Lf $jsonOut $jsonText
     Write-Output "json     : $jsonOut"
 }
 
 if ($Summary) {
-    $dir = Split-Path -Parent $Summary
-    if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
-    [System.IO.File]::WriteAllText($Summary, ((Get-Summary $entries) -replace "`r`n", "`n"), (New-Object System.Text.UTF8Encoding($false)))
+    Write-Lf $Summary (Get-Summary -Entries $entries -Named $namedCount -Total $entryCount)
     Write-Output "summary  : $Summary"
 }
 
 if ($OutDir) {
-    if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Force -Path $OutDir | Out-Null }
     $fullPath = Join-Path $OutDir 'SIGNATURES.md'
-    [System.IO.File]::WriteAllText($fullPath, ((Get-FullDoc $entries) -replace "`r`n", "`n"), (New-Object System.Text.UTF8Encoding($false)))
+    Write-Lf $fullPath (Get-FullDoc -Entries $entries -Named $namedCount -Total $entryCount)
     Write-Output "markdown : $fullPath"
 }
 

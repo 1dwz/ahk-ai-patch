@@ -227,7 +227,7 @@ try {
     if (Test-Path $patchedCpp) {
         $patchedText = [System.IO.File]::ReadAllText($patchedCpp)
         $stockText = if (Test-Path $stockCpp) { [System.IO.File]::ReadAllText($stockCpp) } else { $null }
-        foreach ($sw in @('/dump-api', '/AI', '/NonInteractive')) {
+        foreach ($sw in @('/AI', '/NonInteractive')) {
             $inPatched = $patchedText -match [regex]::Escape("`"$sw`"")
             if (-not $inPatched) {
                 Fail $sw 'not present in the patched parser -- the addition is missing'
@@ -252,11 +252,17 @@ try {
 
     Write-Output ''
     Write-Output '### the additions work on the patched build'
-    $d = Run-Interpreter $Patched @('/dump-api')
-    if ($d.TimedOut) { Fail 'patched /dump-api' 'timed out' }
-    elseif ($d.Exit -ne 0) { Fail 'patched /dump-api' "exit $($d.Exit)" }
-    elseif ($d.Out -notmatch 'built-in functions') { Fail 'patched /dump-api' 'no table on stdout' }
-    else { Pass '/dump-api prints the table (exit 0)' }
+    # /AI is exercised by running a script whose runtime error must be reported
+    # on stderr with a non-zero exit and no dialog.  A stock build would raise a
+    # message box here (that is the whole point of the switch), so this half of
+    # the pair is only ever run against the patched binary -- never against
+    # stock.  test-noninteractive.ps1 covers the same contract in more depth.
+    $aiProbe = Script 'ai-probe.ahk' "#Requires AutoHotkey v2.0`nx := NoSuchFuncAnywhere(1)`n"
+    $ai = Run-Interpreter $Patched @('/AI', $aiProbe)
+    if ($ai.TimedOut) { Fail 'patched /AI' 'timed out' }
+    elseif ($ai.Exit -eq 0) { Fail 'patched /AI' 'a script with an unhandled error exited 0' }
+    elseif (-not $ai.Err.Trim()) { Fail 'patched /AI' 'nothing written to stderr' }
+    else { Pass "/AI reports the error on stderr and exits non-zero (exit $($ai.Exit))" }
 }
 finally {
     # Safety net: if a case ever reaches a modal dialog despite the case list

@@ -1,27 +1,14 @@
 diff --git a/source/script.h b/source/script.h
-index b34d5a39..12782257 100644
+index b34d5a39..62d18730 100644
 --- a/source/script.h
 +++ b/source/script.h
-@@ -1792,6 +1792,18 @@ struct FuncEntry
- 	UCHAR mOutputVars[MAX_FUNC_OUTPUT_VAR];
- };
+@@ -1,4 +1,4 @@
+-﻿/*
++/*
+ AutoHotkey
  
-+// ahk-ai patch: a flattened view of one g_BIF row, for /dump-api. It exists so
-+// callers outside script.cpp can read the table without depending on the
-+// BIF1/BIFn macro layout or on FuncEntry's internals.
-+struct BuiltinApiFunc
-+{
-+	LPCTSTR name;
-+	int minParams;
-+	bool variadic;      // mMaxParams == MAX_FUNCTION_PARAMS
-+	int outputCount;
-+	UCHAR outputs[MAX_FUNC_OUTPUT_VAR];
-+};
-+
- 
- class DECLSPEC_NOVTABLE EnumBase : public Func
- {
-@@ -2282,10 +2294,15 @@ public:
+ Copyright 2003-2009 Chris Mallett (support@autohotkey.com)
+@@ -2282,10 +2282,15 @@ public:
  	bool mAutoExecSectionIsRunning;
  	bool mIsRestart; // The app is restarting rather than starting from scratch.
  	bool mErrorStdOut; // true if load-time syntax errors should be sent to stdout vs. a MsgBox.
@@ -37,24 +24,3 @@ index b34d5a39..12782257 100644
  #ifndef AUTOHOTKEYSC
  	bool mValidateThenExit;
  	LPTSTR mCmdLineInclude;
-@@ -2363,6 +2380,20 @@ public:
- 	IObject *GetBuiltinObject(LPCTSTR aName);
- 	static Func *GetBuiltInFunc(LPCTSTR aFuncName);
- 	static Func *GetBuiltInMdFunc(LPCTSTR aFuncName);
-+	// ahk-ai patch: read-only access to the built-in function table, so that
-+	// /dump-api (handled in AutoHotkey.cpp, where g_BIF is out of scope
-+	// because it is file-local to script.cpp) can report what this build
-+	// actually provides.
-+	static int BuiltinApiCount();
-+	static const BuiltinApiFunc &BuiltinApiAt(int aIndex);
-+	// ahk-ai patch: the typed registry from MdFunc.cpp (lib/functions.h).  It
-+	// carries full argument types, which g_BIF does not, so /dump-api reports
-+	// both tables.  MdType is passed as int here rather than by name, because
-+	// MdType.h is a separate header and MdFunc.h includes script.h; taking the
-+	// enum by value through int keeps this header free of that dependency.
-+	static int MdFuncApiCount();
-+	static LPCTSTR MdFuncApiAt(int aIndex, int &aArgCount, int *&aArgTypes, int &aRetType);
-+	static LPCTSTR MdTypeToString(int aType);
- 	UserFunc *AddFunc(LPCTSTR aFuncName, size_t aFuncNameLength, FuncDefType aIsInExpression = FuncDefNormal, Object *aClassObject = nullptr);
- 	Var *AddFuncVar(UserFunc *aFunc);
- 	UserFunc *AddFuncToList(UserFunc *aFunc);

@@ -81,15 +81,15 @@ foreach ($name in ($DocFiles + $ExtraDoc)) {
     }
 }
 
-# Refuse to build an installer around a stock binary: /dump-api is the identity
-# check, and a stock interpreter answers 0 functions (or blocks on a dialog).
+# Refuse to build an installer around a stock binary.  The check is a STATIC
+# byte scan (see Test-AhkPatchedBuild): running an unknown binary to ask it about
+# a switch it may not implement is precisely how an unattended build ends up
+# stuck behind a modal dialog.
 Import-Module (Join-Path $PSScriptRoot 'AhkAi.psm1') -Force
 foreach ($name in $required) {
-    $r = Invoke-AhkAi -Exe (Join-Path $Dist $name) -Arguments @('/dump-api') -TimeoutMs 60000
-    if ($r.ExitCode -ne 0) { throw "$name failed /dump-api (exit $($r.ExitCode)): $($r.StdErr)" }
-    $n = ([regex]::Matches($r.StdOut, '(?m)^\w+\t')).Count
-    if ($n -lt 300) { throw "$name reports only $n functions -- not a patched build" }
-    Write-Host "    $name : $n functions"
+    $id = Test-AhkPatchedBuild -Path (Join-Path $Dist $name)
+    if (-not $id.Patched) { throw "$name is not the patched build: $($id.Reason)" }
+    Write-Host "    $name : patched (marker x$($id.Needle))"
 }
 
 # --------------------------------------------------------------- 2) compile

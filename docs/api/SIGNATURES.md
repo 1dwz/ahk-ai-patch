@@ -1,7 +1,21 @@
 # Built-in function reference
 
-Generated from `source/lib/functions.h`. Do not edit by hand --
+Generated from the AutoHotkey source tree. Do not edit by hand --
 regenerate with `pwsh -NoProfile -File tools/extract-api-docs.ps1`.
+
+354 built-in function(s) are declared in this source tree.
+
+- **253** carry full signatures (directions, types, parameter names,
+  return type), declared with the `md_func` family of macros in
+  `source/lib/functions.h`.
+- **101** are registered in the g_BIF[] table in
+  `source/script.cpp`, which stores only a name and an arity. Their
+  implementations take positional arguments, so **this source tree does
+  not declare their parameter names**; upstream is migrating them to the
+  `md_func` form and the rest have no names here to read. Those entries
+  show their real arity and are marked `[arity only]`. No placeholder
+  names are invented, because a placeholder is indistinguishable from a
+  real parameter name once it is in a document.
 
 `In` = required, `In_Opt` = optional, `Out*` = by-reference output,
 `Ret` = return value. Types are the native declarations, which map to AHK
@@ -13,62 +27,72 @@ v2 values as: `String` -> String, `Int32`/`Int64`/`UInt32`/`IntPtr` -> Integer,
 ### Abs
 
 ```ahk
-Abs(arg1)
+Abs(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ACos
 
 ```ahk
-ACos(arg1)
+ACos(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ASin
 
 ```ahk
-ASin(arg1)
+ASin(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ATan
 
 ```ahk
-ATan(arg1)
+ATan(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ATan2
 
 ```ahk
-ATan2(arg1, arg2)
+ATan2(<2 argument(s)>)
 ```
 
 min params: 2, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ## B
 
@@ -128,38 +152,44 @@ min params: 0, max params: 2.
 ### Ceil
 
 ```ahk
-Ceil(arg1)
+Ceil(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### Chr
 
 ```ahk
-Chr(arg1)
+Chr(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### Click
 
 ```ahk
-Click([, arg1], [, arg2], [, arg3], [, arg4], [, arg5], [, arg6])
+Click(<0 to 6 arguments>)
 ```
 
 min params: 0, max params: 6.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ClipWait
 
@@ -177,110 +207,128 @@ min params: 0, max params: 2; returns: `Bool32`.
 ### ComCall
 
 ```ahk
-ComCall()
+ComCall(<2 or more arguments>)
 ```
 
 min params: 2, max params: 0; variadic (accepts a variable number of arguments).
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ComObjActive
 
 ```ahk
-ComObjActive(arg1)
+ComObjActive(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ComObjConnect
 
 ```ahk
-ComObjConnect(arg1, [, arg2])
+ComObjConnect(<1 to 2 arguments>)
 ```
 
 min params: 1, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ComObjFlags
 
 ```ahk
-ComObjFlags(arg1, [, arg2], [, arg3])
+ComObjFlags(<1 to 3 arguments>)
 ```
 
 min params: 1, max params: 3.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ComObjFromPtr
 
 ```ahk
-ComObjFromPtr(arg1)
+ComObjFromPtr(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ComObjGet
 
 ```ahk
-ComObjGet(arg1)
+ComObjGet(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ComObjQuery
 
 ```ahk
-ComObjQuery(arg1, arg2, [, arg3])
+ComObjQuery(<2 to 3 arguments>)
 ```
 
 min params: 2, max params: 3.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ComObjType
 
 ```ahk
-ComObjType(arg1, [, arg2])
+ComObjType(<1 to 2 arguments>)
 ```
 
 min params: 1, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ComObjValue
 
 ```ahk
-ComObjValue(arg1)
+ComObjValue(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ControlAddItem
 
@@ -832,14 +880,16 @@ min params: 1, max params: 2; returns: `String`.
 ### Cos
 
 ```ahk
-Cos(arg1)
+Cos(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### Critical
 
@@ -886,14 +936,16 @@ min params: 3, max params: 3; returns: `Int64`.
 ### DefineProp
 
 ```ahk
-DefineProp(arg1, arg2, arg3)
+DefineProp(<3 argument(s)>)
 ```
 
 min params: 3, max params: 3.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### DetectHiddenText
 
@@ -1001,14 +1053,16 @@ min params: 0, max params: 3; returns: `String`.
 ### DllCall
 
 ```ahk
-DllCall()
+DllCall(<1 or more arguments>)
 ```
 
 min params: 1, max params: 0; variadic (accepts a variable number of arguments).
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### Download
 
@@ -1356,14 +1410,16 @@ min params: 0, max params: 1.
 ### Exp
 
 ```ahk
-Exp(arg1)
+Exp(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ## F
 
@@ -1551,14 +1607,16 @@ min params: 2, max params: 3.
 ### FileOpen
 
 ```ahk
-FileOpen(arg1, arg2, [, arg3])
+FileOpen(<2 to 3 arguments>)
 ```
 
 min params: 2, max params: 3.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### FileRead
 
@@ -1644,38 +1702,44 @@ min params: 0, max params: 4.
 ### Floor
 
 ```ahk
-Floor(arg1)
+Floor(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### Format
 
 ```ahk
-Format()
+Format(<1 or more arguments>)
 ```
 
 min params: 1, max params: 0; variadic (accepts a variable number of arguments).
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### FormatTime
 
 ```ahk
-FormatTime([, arg1], [, arg2])
+FormatTime(<0 to 2 arguments>)
 ```
 
 min params: 0, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ## G
 
@@ -1731,14 +1795,16 @@ min params: 1, max params: 1.
 ### GetMethod
 
 ```ahk
-GetMethod(arg1, [, arg2], [, arg3])
+GetMethod(<1 to 3 arguments>)
 ```
 
 min params: 1, max params: 3.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### GroupActivate
 
@@ -1825,38 +1891,44 @@ min params: 1, max params: 2; returns: `Object`; statement form (returns the pre
 ### HasBase
 
 ```ahk
-HasBase(arg1, arg2)
+HasBase(<2 argument(s)>)
 ```
 
 min params: 2, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### HasMethod
 
 ```ahk
-HasMethod(arg1, [, arg2], [, arg3])
+HasMethod(<1 to 3 arguments>)
 ```
 
 min params: 1, max params: 3.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### HasProp
 
 ```ahk
-HasProp(arg1, arg2)
+HasProp(<2 argument(s)>)
 ```
 
 min params: 2, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### HotIf
 
@@ -2099,74 +2171,86 @@ min params: 0, max params: 2; statement form (returns the previous setting).
 ### InStr
 
 ```ahk
-InStr(arg1, arg2, [, arg3], [, arg4], [, arg5])
+InStr(<2 to 5 arguments>)
 ```
 
 min params: 2, max params: 5.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### IsAlnum
 
 ```ahk
-IsAlnum(arg1, [, arg2])
+IsAlnum(<1 to 2 arguments>)
 ```
 
 min params: 1, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### IsAlpha
 
 ```ahk
-IsAlpha(arg1, [, arg2])
+IsAlpha(<1 to 2 arguments>)
 ```
 
 min params: 1, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### IsDigit
 
 ```ahk
-IsDigit(arg1)
+IsDigit(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### IsFloat
 
 ```ahk
-IsFloat(arg1)
+IsFloat(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### IsInteger
 
 ```ahk
-IsInteger(arg1)
+IsInteger(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### IsLabel
 
@@ -2183,98 +2267,114 @@ min params: 1, max params: 1.
 ### IsLower
 
 ```ahk
-IsLower(arg1, [, arg2])
+IsLower(<1 to 2 arguments>)
 ```
 
 min params: 1, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### IsNumber
 
 ```ahk
-IsNumber(arg1)
+IsNumber(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### IsObject
 
 ```ahk
-IsObject(arg1)
+IsObject(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### IsSetRef
 
 ```ahk
-IsSetRef(arg1)
+IsSetRef(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### IsSpace
 
 ```ahk
-IsSpace(arg1)
+IsSpace(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### IsTime
 
 ```ahk
-IsTime(arg1)
+IsTime(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### IsUpper
 
 ```ahk
-IsUpper(arg1, [, arg2])
+IsUpper(<1 to 2 arguments>)
 ```
 
 min params: 1, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### IsXDigit
 
 ```ahk
-IsXDigit(arg1)
+IsXDigit(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ## K
 
@@ -2353,14 +2453,16 @@ min params: 2, max params: 6; returns: `Variant`.
 ### Ln
 
 ```ahk
-Ln(arg1)
+Ln(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### LoadPicture
 
@@ -2379,40 +2481,46 @@ min params: 1, max params: 3; returns: `UIntPtr`.
 ### Log
 
 ```ahk
-Log(arg1)
+Log(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### LTrim
 
 ```ahk
-LTrim(arg1, [, arg2])
+LTrim(<1 to 2 arguments>)
 ```
 
 min params: 1, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ## M
 
 ### Max
 
 ```ahk
-Max()
+Max(<1 or more arguments>)
 ```
 
 min params: 1, max params: 0; variadic (accepts a variable number of arguments).
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### MenuFromHandle
 
@@ -2451,26 +2559,30 @@ min params: 3, max params: 11.
 ### Min
 
 ```ahk
-Min()
+Min(<1 or more arguments>)
 ```
 
 min params: 1, max params: 0; variadic (accepts a variable number of arguments).
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### Mod
 
 ```ahk
-Mod(arg1, arg2)
+Mod(<2 argument(s)>)
 ```
 
 min params: 2, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### MonitorGet
 
@@ -2618,100 +2730,116 @@ min params: 0, max params: 3; returns: `String`.
 ### NumGet
 
 ```ahk
-NumGet(arg1, arg2, [, arg3])
+NumGet(<2 to 3 arguments>)
 ```
 
 min params: 2, max params: 3.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### NumPut
 
 ```ahk
-NumPut()
+NumPut(<3 or more arguments>)
 ```
 
 min params: 3, max params: 0; variadic (accepts a variable number of arguments).
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ## O
 
 ### ObjAddRef
 
 ```ahk
-ObjAddRef(arg1)
+ObjAddRef(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ObjBindMethod
 
 ```ahk
-ObjBindMethod()
+ObjBindMethod(<1 or more arguments>)
 ```
 
 min params: 1, max params: 0; variadic (accepts a variable number of arguments).
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ObjFromPtr
 
 ```ahk
-ObjFromPtr(arg1)
+ObjFromPtr(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ObjFromPtrAddRef
 
 ```ahk
-ObjFromPtrAddRef(arg1)
+ObjFromPtrAddRef(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ObjGetBase
 
 ```ahk
-ObjGetBase(arg1)
+ObjGetBase(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ObjGetCapacity
 
 ```ahk
-ObjGetCapacity(arg1)
+ObjGetCapacity(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ObjGetDataPtr
 
@@ -2740,98 +2868,114 @@ min params: 1, max params: 1; returns: `UIntPtr`.
 ### ObjHasOwnProp
 
 ```ahk
-ObjHasOwnProp(arg1, arg2)
+ObjHasOwnProp(<2 argument(s)>)
 ```
 
 min params: 2, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ObjOwnPropCount
 
 ```ahk
-ObjOwnPropCount(arg1)
+ObjOwnPropCount(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ObjOwnProps
 
 ```ahk
-ObjOwnProps(arg1)
+ObjOwnProps(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ObjPtr
 
 ```ahk
-ObjPtr(arg1)
+ObjPtr(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ObjPtrAddRef
 
 ```ahk
-ObjPtrAddRef(arg1)
+ObjPtrAddRef(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ObjRelease
 
 ```ahk
-ObjRelease(arg1)
+ObjRelease(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ObjSetBase
 
 ```ahk
-ObjSetBase(arg1, arg2)
+ObjSetBase(<2 argument(s)>)
 ```
 
 min params: 2, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ObjSetCapacity
 
 ```ahk
-ObjSetCapacity(arg1, arg2)
+ObjSetCapacity(<2 argument(s)>)
 ```
 
 min params: 2, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ObjSetDataPtr
 
@@ -2902,14 +3046,16 @@ min params: 2, max params: 3.
 ### Ord
 
 ```ahk
-Ord(arg1)
+Ord(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### OutputDebug
 
@@ -3103,64 +3249,74 @@ min params: 1, max params: 2; returns: `UInt32`.
 ### Props
 
 ```ahk
-Props(arg1)
+Props(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ## R
 
 ### Random
 
 ```ahk
-Random([, arg1], [, arg2])
+Random(<0 to 2 arguments>)
 ```
 
 min params: 0, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### RegCreateKey
 
 ```ahk
-RegCreateKey([, arg1])
+RegCreateKey(<0 to 1 arguments>)
 ```
 
 min params: 0, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### RegDelete
 
 ```ahk
-RegDelete([, arg1], [, arg2])
+RegDelete(<0 to 2 arguments>)
 ```
 
 min params: 0, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### RegDeleteKey
 
 ```ahk
-RegDeleteKey([, arg1])
+RegDeleteKey(<0 to 1 arguments>)
 ```
 
 min params: 0, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### RegExMatch
 
@@ -3197,26 +3353,30 @@ min params: 2, max params: 6; returns: `Variant`.
 ### RegRead
 
 ```ahk
-RegRead([, arg1], [, arg2], [, arg3])
+RegRead(<0 to 3 arguments>)
 ```
 
 min params: 0, max params: 3.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### RegWrite
 
 ```ahk
-RegWrite(arg1, [, arg2], [, arg3], [, arg4])
+RegWrite(<1 to 4 arguments>)
 ```
 
 min params: 1, max params: 4.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### Reload
 
@@ -3229,26 +3389,30 @@ min params: 0, max params: 0.
 ### Round
 
 ```ahk
-Round(arg1, [, arg2])
+Round(<1 to 2 arguments>)
 ```
 
 min params: 1, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### RTrim
 
 ```ahk
-RTrim(arg1, [, arg2])
+RTrim(<1 to 2 arguments>)
 ```
 
 min params: 1, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### Run
 
@@ -3576,14 +3740,16 @@ min params: 1, max params: 1.
 ### Sin
 
 ```ahk
-Sin(arg1)
+Sin(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### Sleep
 
@@ -3600,14 +3766,16 @@ min params: 1, max params: 1.
 ### Sort
 
 ```ahk
-Sort(arg1, [, arg2], [, arg3])
+Sort(<1 to 3 arguments>)
 ```
 
 min params: 1, max params: 3.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### SoundBeep
 
@@ -3625,50 +3793,58 @@ min params: 0, max params: 2; statement form (returns the previous setting).
 ### SoundGetInterface
 
 ```ahk
-SoundGetInterface(arg1, [, arg2], [, arg3])
+SoundGetInterface(<1 to 3 arguments>)
 ```
 
 min params: 1, max params: 3.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### SoundGetMute
 
 ```ahk
-SoundGetMute([, arg1], [, arg2])
+SoundGetMute(<0 to 2 arguments>)
 ```
 
 min params: 0, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### SoundGetName
 
 ```ahk
-SoundGetName([, arg1], [, arg2])
+SoundGetName(<0 to 2 arguments>)
 ```
 
 min params: 0, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### SoundGetVolume
 
 ```ahk
-SoundGetVolume([, arg1], [, arg2])
+SoundGetVolume(<0 to 2 arguments>)
 ```
 
 min params: 0, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### SoundPlay
 
@@ -3686,26 +3862,30 @@ min params: 1, max params: 2.
 ### SoundSetMute
 
 ```ahk
-SoundSetMute(arg1, [, arg2], [, arg3])
+SoundSetMute(<1 to 3 arguments>)
 ```
 
 min params: 1, max params: 3.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### SoundSetVolume
 
 ```ahk
-SoundSetVolume(arg1, [, arg2], [, arg3])
+SoundSetVolume(<1 to 3 arguments>)
 ```
 
 min params: 1, max params: 3.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### SplitPath
 
@@ -3727,14 +3907,16 @@ min params: 1, max params: 6.
 ### Sqrt
 
 ```ahk
-Sqrt(arg1)
+Sqrt(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### StatusBarGetText
 
@@ -3774,74 +3956,86 @@ min params: 0, max params: 8; returns: `Bool32`.
 ### StrCompare
 
 ```ahk
-StrCompare(arg1, arg2, [, arg3])
+StrCompare(<2 to 3 arguments>)
 ```
 
 min params: 2, max params: 3.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### StrGet
 
 ```ahk
-StrGet(arg1, [, arg2], [, arg3])
+StrGet(<1 to 3 arguments>)
 ```
 
 min params: 1, max params: 3.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### StrLen
 
 ```ahk
-StrLen(arg1)
+StrLen(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### StrLower
 
 ```ahk
-StrLower(arg1)
+StrLower(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### StrPtr
 
 ```ahk
-StrPtr(arg1)
+StrPtr(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### StrPut
 
 ```ahk
-StrPut(arg1, [, arg2], [, arg3], [, arg4])
+StrPut(<1 to 4 arguments>)
 ```
 
 min params: 1, max params: 4.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### StrReplace
 
@@ -3878,38 +4072,44 @@ min params: 1, max params: 4; returns: `Object`.
 ### StrTitle
 
 ```ahk
-StrTitle(arg1)
+StrTitle(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### StrUpper
 
 ```ahk
-StrUpper(arg1)
+StrUpper(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### SubStr
 
 ```ahk
-SubStr(arg1, arg2, [, arg3])
+SubStr(<2 to 3 arguments>)
 ```
 
 min params: 2, max params: 3.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### Suspend
 
@@ -3948,14 +4148,16 @@ min params: 0, max params: 0; returns: `Object`.
 ### Tan
 
 ```ahk
-Tan(arg1)
+Tan(<1 argument(s)>)
 ```
 
 min params: 1, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### Thread
 
@@ -3974,14 +4176,16 @@ min params: 1, max params: 3.
 ### Throw
 
 ```ahk
-Throw()
+Throw(<0 or more arguments>)
 ```
 
 min params: 0, max params: 0; variadic (accepts a variable number of arguments).
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### ToolTip
 
@@ -4029,52 +4233,60 @@ min params: 0, max params: 3.
 ### Trim
 
 ```ahk
-Trim(arg1, [, arg2])
+Trim(<1 to 2 arguments>)
 ```
 
 min params: 1, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### Type
 
 ```ahk
-Type([, arg1])
+Type(<0 to 1 arguments>)
 ```
 
 min params: 0, max params: 1.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ## V
 
 ### VarSetStrCapacity
 
 ```ahk
-VarSetStrCapacity(arg1, [, arg2])
+VarSetStrCapacity(<1 to 2 arguments>)
 ```
 
 min params: 1, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### VerCompare
 
 ```ahk
-VerCompare(arg1, arg2)
+VerCompare(<2 argument(s)>)
 ```
 
 min params: 2, max params: 2.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ## W
 
@@ -4111,14 +4323,16 @@ min params: 0, max params: 4.
 ### WinActive
 
 ```ahk
-WinActive([, arg1], [, arg2], [, arg3], [, arg4])
+WinActive(<0 to 4 arguments>)
 ```
 
 min params: 0, max params: 4.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### WinClose
 
@@ -4139,14 +4353,16 @@ min params: 0, max params: 5.
 ### WinExist
 
 ```ahk
-WinExist([, arg1], [, arg2], [, arg3], [, arg4])
+WinExist(<0 to 4 arguments>)
 ```
 
 min params: 0, max params: 4.
 
-Registered in ``g_BIF`` (``source/script.cpp``) rather than declared in
-``functions.h``, so its parameter names are not available from source.
-See the hand-written notes in the repository ``docs/`` for its options.
+Declared in ``g_BIF[]`` (``source/script.cpp``). That table stores a name
+and an arity only, and the implementation takes positional arguments, so
+**this source tree declares no parameter names for it**. Upstream is
+migrating built-ins to the ``md_func`` form; until this one is migrated
+there are no names to publish, and none are invented here.
 
 ### WinGetAlwaysOnTop
 

@@ -130,18 +130,20 @@ if (Test-Path $built) {
             }
         }
 
-        $gen = Join-Path $RepoRoot 'tools\gen-builtin-docs.ps1'
+        # The API reference is derived from the SOURCE tree, not from the binary:
+        # source/lib/functions.h declares 253 built-ins with full parameter
+        # names, and the g_BIF[] table in source/script.cpp supplies the other
+        # 101 (name + arity only -- see the generator header for why).  Deriving
+        # it here rather than from the exe means -OutDir works for either
+        # architecture and for a stock build too.
+        $gen = Join-Path $RepoRoot 'tools\extract-api-docs.ps1'
         if (Test-Path $gen) {
             try {
-                $genArgs = @{
-                    RepoRoot  = $RepoRoot
-                    Exe       = (Join-Path $OutDir $exeName)
-                    Markdown  = (Join-Path $OutDir 'BUILTIN_API.md')
-                    Json      = (Join-Path $OutDir 'builtin-api.json')
-                    Quiet     = $true
-                }
-                & $gen @genArgs
-                Write-Output "Docs    : BUILTIN_API.md + builtin-api.json ($LASTEXITCODE)"
+                & $gen -RepoRoot $RepoRoot -UpstreamDir $UpstreamDir `
+                       -Summary (Join-Path $OutDir 'BUILTIN_API.md') `
+                       -Json -OutFile (Join-Path $OutDir 'builtin-api.json')
+                if ($LASTEXITCODE -ne 0) { throw "generator exited $LASTEXITCODE" }
+                Write-Output "Docs    : BUILTIN_API.md + builtin-api.json (from source)"
             } catch {
                 # Documentation must never fail a build; the binary is the
                 # deliverable and this is a derived artifact.
@@ -205,30 +207,6 @@ if (Test-Path $built) {
                 Write-Warning "console visibility check could not run: $($_.Exception.Message)"
             } finally {
                 Remove-Item $visLog -Force -ErrorAction SilentlyContinue
-            }
-        }
-
-        # /dump-api has the same console problem as /AI and the same blind spot:
-        # piping or redirecting gives it a real handle, so every automated check
-        # passed while typing the command printed nothing (GUI-subsystem binary,
-        # no inherited console).  Same rule as above: do not capture its output.
-        $dumpTest = Join-Path $RepoRoot 'tools\test-dump-api-console.ps1'
-        if (Test-Path $dumpTest) {
-            $dumpLog = Join-Path $env:TEMP ('ahk-dumpvis-{0}.txt' -f ([guid]::NewGuid().ToString('N')))
-            try {
-                & $dumpTest -Exe (Join-Path $OutDir $exeName) -RepoRoot $RepoRoot *> $dumpLog
-                $dumpCode = $LASTEXITCODE
-                $dumpOut = if (Test-Path $dumpLog) { Get-Content $dumpLog -Raw } else { '' }
-                if ($dumpCode -eq 0 -and $dumpOut -match 'OK: /dump-api output is visible') {
-                    Write-Output 'Console : /dump-api output visible on a bare console'
-                } else {
-                    Write-Warning "/dump-api output is NOT visible on a bare console (exit $dumpCode)"
-                    ($dumpOut -split "`r?`n") | Where-Object { $_ } | ForEach-Object { Write-Warning "  $_" }
-                }
-            } catch {
-                Write-Warning "dump-api console check could not run: $($_.Exception.Message)"
-            } finally {
-                Remove-Item $dumpLog -Force -ErrorAction SilentlyContinue
             }
         }
 

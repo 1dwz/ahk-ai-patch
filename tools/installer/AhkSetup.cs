@@ -7,7 +7,8 @@
 //   1. extracts AutoHotkey64/32.exe and doc\* into C:\Program Files\AHK-v2
 //   2. prepends that directory to the machine PATH
 //   3. points the .ahk association at the interpreter for this OS bitness
-//   4. verifies the result by running /dump-api on both binaries
+//   4. verifies the result by checking both binaries for the patch marker
+//      (a static scan -- never by running them, which could raise a dialog)
 //   5. writes uninstall.cmd
 //
 // Design notes worth keeping:
@@ -22,7 +23,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Reflection;
@@ -36,10 +36,13 @@ static class AhkSetup
     const string ProgId = "AutoHotkeyScript";
     const string AppId = "AHK-v2";
 
-    // Built-in function count of the patch set, as reported by /dump-api.  This
-    // patch set adds no built-ins, so the number matches stock AutoHotkey; the
-    // real identity check is that /dump-api exists at all.
-    const int ExpectedFunctions = 354;
+    // The patch set adds no built-in functions: it is a pure switch addition, so
+    // the built-in registry is stock's and there is nothing to count.  Identity
+    // is decided by a STATIC scan for the /NonInteractive literal -- see
+    // IsPatchedBuild.  The binary must never be executed to identify it, because
+    // a stock interpreter treats an unknown switch as the script path, fails to
+    // find that file, and raises a modal dialog (which would hang a silent
+    // install behind a window nobody is there to click).
 
     // Appended-payload trailer: magic, index offset, index length, blob offset.
     // The magic is 9 bytes ("AHKSETUP1"), so the three Int64s start at 9.
@@ -410,22 +413,14 @@ static class AhkSetup
             string p = Path.Combine(InstallDir, exe);
             if (!File.Exists(p)) { Console.Error.WriteLine("  " + exe + " missing"); rc = 1; continue; }
 
-            string outp;
-            int code = RunCapture(p, "/dump-api", 20000, out outp);
-            int n = CountFunctions(outp);
-
-            // A stock interpreter does not implement /dump-api at all, so a
-            // zero exit code is itself the patch identity check; the count
-            // additionally proves the built-in registry came through intact.
-            if (code != 0 || n != ExpectedFunctions)
+            if (!IsPatchedBuild(p))
             {
-                Console.Error.WriteLine("  {0}: exit={1} functions={2} (expected {3}) -- NOT the patched build",
-                    exe, code, n, ExpectedFunctions);
+                Console.Error.WriteLine("  {0}: not the patched build (the /NonInteractive marker is absent)", exe);
                 rc = 1;
             }
             else if (!quiet)
             {
-                Console.WriteLine("  {0}: {1} functions, ok", exe, ExpectedFunctions);
+                Console.WriteLine("  {0}: patched (marker present), ok", exe);
             }
         }
 
@@ -444,46 +439,32 @@ static class AhkSetup
         return rc;
     }
 
-    static int CountFunctions(string dump)
+    // Static identity check.  Every /AI build contains the wide-character
+    // literal "/NonInteractive", because the parser compares argv against it at
+    // run time (source/AutoHotkey.cpp: _tcsicmp(param, _T("/NonInteractive"))).
+    // Stock AutoHotkey contains no such literal anywhere, and a 30-byte UTF-16LE
+    // needle does not occur by accident.
+    //
+    // Deliberately NOT a runtime probe: asking a stock interpreter about a
+    // switch it does not implement makes it treat the switch as the script path
+    // and raise a modal dialog.
+    static bool IsPatchedBuild(string path)
     {
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var line in dump.Split('\n'))
-        {
-            int tab = line.IndexOf('\t');
-            if (tab <= 0) continue;
-            string name = line.Substring(0, tab).Trim();
-            if (name.Length == 0 || name[0] == '#') continue;
-            bool ok = true;
-            foreach (char c in name)
-                if (!char.IsLetterOrDigit(c) && c != '_') { ok = false; break; }
-            if (ok) seen.Add(name);
-        }
-        return seen.Count;
-    }
+        var needle = Encoding.Unicode.GetBytes("/NonInteractive");
+        byte[] bytes;
+        try { bytes = File.ReadAllBytes(path); }
+        catch { return false; }
 
-    static int RunCapture(string exe, string argument, int timeoutMs, out string stdout)
-    {
-        // Redirect BOTH streams and read them asynchronously: a synchronous
-        // ReadToEnd on one pipe deadlocks as soon as the child fills the other.
-        var psi = new ProcessStartInfo(exe, argument)
+        for (int i = 0; i + needle.Length <= bytes.Length; i++)
         {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-        using (var p = Process.Start(psi))
-        {
-            var so = p.StandardOutput.ReadToEndAsync();
-            var se = p.StandardError.ReadToEndAsync();
-            if (!p.WaitForExit(timeoutMs))
+            if (bytes[i] != needle[0]) continue;
+            bool match = true;
+            for (int j = 1; j < needle.Length; j++)
             {
-                try { p.Kill(); } catch { }
-                stdout = "";
-                return 124;
+                if (bytes[i + j] != needle[j]) { match = false; break; }
             }
-            stdout = so.Result;
-            return p.ExitCode;
+            if (match) return true;
         }
+        return false;
     }
 }

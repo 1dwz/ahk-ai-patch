@@ -11,8 +11,14 @@ Two things this exists to catch, both of which were real:
      difference is easy to miss and the stdout of a passing script looks
      identical.
 
-  2. A build that answers /dump-api but does not actually honour /AI.  Function
-     count alone cannot tell you that: the switch has to be exercised.
+  2. A build that carries the patch but does not actually honour /AI.  Identity
+     alone cannot tell you that: the switch has to be exercised.
+
+Identity is decided by a STATIC byte scan, not by running the binary.  Asking a
+stock interpreter about a switch it does not know makes it treat the switch as
+the script path, fail to find that file, and raise a MODAL DIALOG -- i.e.
+executing an unknown binary in order to identify it is itself the thing that
+hangs an unattended run.  See Test-AhkPatchedBuild in tools/AhkAi.psm1.
 
 Usage:
   pwsh -NoProfile -File tools/test-system-interpreter.ps1
@@ -21,16 +27,12 @@ Usage:
 [CmdletBinding()]
 param(
     [string]$TargetDir      = 'C:\Program Files\AutoHotkey\v2',
-    # This patch set does not add or remove built-in functions, so the count is
-    # upstream's.
-    [int]$ExpectedFunctions = 354,
     [switch]$Offline
 )
 
 $ErrorActionPreference = 'Stop'
+Import-Module (Join-Path $PSScriptRoot 'AhkAi.psm1') -Force
 
-# Stock v2.0.28 x64 is 1,284,608 bytes and has no /dump-api at all, so function
-# count is the reliable signal; size is reported only as context.
 $problems = [System.Collections.Generic.List[string]]::new()
 
 $candidates = @('AutoHotkey64.exe', 'AutoHotkey32.exe')
@@ -48,23 +50,11 @@ foreach ($name in $candidates) {
         continue
     }
 
-    # /dump-api must be invoked through the timeout-aware helper.  A stock
-    # binary does not recognise the switch, treats it as a script path, and
-    # blocks on a "Script file not found." dialog -- which made this test hang
-    # for 5 minutes instead of reporting a problem when pointed at a stock build.
-    Import-Module (Join-Path $PSScriptRoot 'AhkAi.psm1') -Force
-    $dump = Invoke-AhkAi -Exe (Resolve-Path $path).Path -Arguments @('/dump-api') -TimeoutMs 15000
-    $out = $dump.StdOut
-    $exit = $dump.ExitCode
-    $blocked = $dump.Blocked
-    $names = @([regex]::Matches($out, '(?m)^([A-Za-z_][A-Za-z0-9_]*)\t') |
-        ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+    $id = Test-AhkPatchedBuild -Path (Resolve-Path $path).Path
+    $line = "{0,-20} : {1,10:N0} B  patched={2}  marker-hits={3}" -f $name, $size, $id.Patched, $id.Needle
 
-    $line = "{0,-20} : {1,10:N0} B  exit={2}  functions={3}" -f $name, $size, $exit, $names.Count
-
-    if ($blocked -or $exit -ne 0 -or $names.Count -ne $ExpectedFunctions) {
-        $why = if ($blocked) { 'blocked on a dialog' } else { "exit=$exit, functions=$($names.Count)" }
-        $problems.Add("$name is not the patched build ($why; expected $ExpectedFunctions functions). Stock binaries block on a dialog or answer exit 2 / 0 functions. Re-run tools/install-patched.ps1.")
+    if (-not $id.Patched) {
+        $problems.Add("$name is not the patched build ($($id.Reason)). Re-run tools/install-patched.ps1.")
         Write-Output ($line + '  <-- STOCK')
         continue
     }
@@ -77,9 +67,9 @@ if ($problems.Count) {
     exit 1
 }
 
-# /dump-api alone would pass on a build that does not honour /AI, so exercise the
-# switch: a script with an unhandled error must report it on stderr and exit
-# non-zero, and must NOT block on a dialog.
+# Identity alone would pass on a build that carries the patch but does not honour
+# /AI, so exercise the switch: a script with an unhandled error must report it on
+# stderr and exit non-zero, and must NOT block on a dialog.
 if (-not $Offline) {
     $exe = Join-Path $TargetDir 'AutoHotkey64.exe'
     $probe = Join-Path $env:TEMP ('ahk-ai-probe-' + [guid]::NewGuid().ToString('N') + '.ahk')
@@ -96,7 +86,6 @@ x := NoSuchFunctionAnywhere(1)
     Copy-Item $probe (Join-Path $iso 'probe.ahk')
 
     try {
-        Import-Module (Join-Path $PSScriptRoot 'AhkAi.psm1') -Force
         $r = Invoke-AhkAi -Exe (Join-Path $iso 'AutoHotkey64.exe') `
             -Arguments @('/AI', (Join-Path $iso 'probe.ahk')) `
             -TimeoutMs 60000 -WorkingDirectory $iso

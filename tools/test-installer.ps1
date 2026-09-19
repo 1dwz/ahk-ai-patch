@@ -8,7 +8,7 @@
     then asserts the observable consequences rather than just "it exited 0":
 
       before : captures PATH, the .ahk association and the install dir
-      install: runs the installer, asserts PATH + association + /dump-api
+      install: runs the installer, asserts PATH + association + patch marker
       remove : runs uninstall.exe, asserts PATH and association were restored
       after  : diffs against the "before" snapshot
 
@@ -24,9 +24,6 @@
 param(
     [string] $Setup = (Join-Path $PSScriptRoot '..\dist\AHK-v2-Setup.exe'),
     [string] $InstallDir = 'C:\Program Files\AHK-v2',
-    # Built-in function count of the build under test.  The default matches this
-    # patch set, which does not add or remove any built-in.
-    [int]    $ExpectedFunctions = 354,
     [switch] $Keep
 )
 
@@ -175,13 +172,14 @@ Check 'no invented shell verbs were added' ($verbs -notcontains 'runasai') ($ver
 $assocExe = [regex]::Match($afterAssoc.Command, '"([^"]+\.exe)"').Groups[1].Value
 Check 'association target exists' (Test-Path $assocExe) $assocExe
 
-# Real execution through the installed binary.
+# Real check through the installed binaries.  Identity is a STATIC scan of the
+# file (Test-AhkPatchedBuild); the binaries are never asked to identify
+# themselves, because a stock one would answer with a modal dialog.
 Import-Module (Join-Path $PSScriptRoot 'AhkAi.psm1') -Force
 foreach ($arch in '64', '32') {
     $exe = Join-Path $InstallDir "AutoHotkey$arch.exe"
-    $r = Invoke-AhkAi -Exe $exe -Arguments @('/dump-api') -TimeoutMs 60000
-    $n = ([regex]::Matches($r.StdOut, '(?m)^\w+\t')).Count
-    Check "AutoHotkey$arch.exe /dump-api -> $ExpectedFunctions" ($r.ExitCode -eq 0 -and $n -eq $ExpectedFunctions) "exit=$($r.ExitCode) n=$n"
+    $id = Test-AhkPatchedBuild -Path $exe
+    Check "AutoHotkey$arch.exe is the patched build" $id.Patched $id.Reason
 }
 
 # The install dir must not carry any external DLL dependency.
