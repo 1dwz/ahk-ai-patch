@@ -11,6 +11,15 @@ This patch set adds three built-in functions to AutoHotkey v2:
 They are `BIF`s, so they are always available — no `#Include`, no
 `lib/` script, and no `LoadLibrary` in user code.
 
+> This file documents only the three functions this patch set adds. For every
+> other built-in function in this build — all 357 of them — see the generated
+> index, `BUILTIN_API.md` (shipped beside the interpreter) or
+> `docs/api/RUNTIME_API.md` in the repository, both produced from the
+> interpreter itself by `AutoHotkey64.exe /dump-api`.
+
+Every option below was verified against the built interpreter; where behaviour
+is surprising it is called out rather than glossed over.
+
 ---
 
 ## JsonParse
@@ -61,20 +70,46 @@ stack.
 text := JsonStringify(value [, indent])
 ```
 
-Serializes `Map`, `Array`, `String`, `Integer` and `Float`. `indent` greater
-than 0 pretty-prints with that many spaces per level (capped at 16); `0` or
-omitted produces compact output.
+Serializes `Map`, `Object`, `Array`, `String`, `Integer` and `Float`. `indent`
+greater than 0 pretty-prints with that many spaces per level (capped at 16); `0`
+or omitted produces compact output.
 
 `Float` is written with `%.17g`, which round-trips an IEEE double exactly.
 Quotes, backslashes, and control characters are escaped; a `"` inside a string
 becomes `\"`.
 
-Any other object (a `Class`, a COM wrapper, ...) is written as a string.
+`Map` and `Object` both become JSON objects and `Array` becomes a JSON array, at
+any nesting depth:
 
 ```ahk
 JsonStringify(Map("k", [1, 2, 3]))        ; {"k":[1,2,3]}
+JsonStringify({ a: 1 })                    ; {"a":1}
+JsonStringify(Map("k", { a: 1 }))          ; {"k":{"a":1}}
 JsonStringify(Map("k", [1, 2]), 2)         ; pretty
 ```
+
+A value held in a variable serializes identically to an inline literal, for
+both `Map` and `Object`.
+
+Any other object is treated as a JSON object with no enumerable own properties.
+A custom `Class` instance therefore serializes to `{}`, not to a string, and a
+COM object serializes to `""`:
+
+```ahk
+class C {
+    x => 1
+}
+JsonStringify(C())                       ; {}      (a class instance is an Object)
+JsonStringify(ComObject("Scripting.Dictionary"))   ; ""
+```
+
+Neither is a useful representation; convert to a `Map` first if you need the
+contents serialized.
+
+> A plain `Object` is **not** enumerable by the language itself — `for k, v in
+> o` raises `Value not enumerable` for an `Object`, unlike a `Map` or `Array`.
+> `JsonStringify` handles this internally via `OwnProps()`. If you walk an
+> object yourself, use `o.OwnProps()`.
 
 ---
 
@@ -118,17 +153,9 @@ verbatim.
 | `StatusText` | String | reason phrase (libcurl does not expose it, so usually `""`) |
 | `Headers` | Map | lower-cased name → value; repeated names (`set-cookie`) become an `Array` |
 | `Body` | String | response body, decoded from UTF-8 (omitted when `SaveTo` is used) |
-| `BodyBytes` | Integer | body size in bytes |
-| `Url` | String | final URL after redirects |
-| `ElapsedMs` | Integer | total time in milliseconds |
-| `Error` | String | present **only** on transport failure |
-| `SavedTo` | String | present only when `SaveTo` was used |
-
-### Error model
-
-This is the part worth reading twice.
-
-* **Transport failure** (DNS failure, refused connection, timeout): the call
+| `BodyBytes` | Integer | body* **Malformed arguments** (empty URL): raises, because it is a programming
+  error rather than a network condition.
+* **libcurl could not initialise** (e.g. the Winsock stack is unavailable):nsport failure** (DNS failure, refused connection, timeout): the call
   **returns normally** with `Status = 0`, `Ok = 0`, and an `Error` string.
 * **HTTP error status** (`404`, `500`, ...): `Status` holds the real code,
   `Ok = 0`, and there is **no** `Error`. A 404 is a successful exchange.

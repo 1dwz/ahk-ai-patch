@@ -68,12 +68,12 @@
     {
       "name": "CallbackCreate",
       "registry": "sMdFunc",
-      "signature": "CallbackCreate(Object, [, String], [, Variant])  -> MdType(8)",
+      "signature": "CallbackCreate(Object, [, String], [, Variant])  -> UInt64",
       "arguments": [
         "Object",
         "Opt String",
         "Opt Variant",
-        "Out_Ret MdType(8)"
+        "Out_Ret UInt64"
       ],
       "min_params": null,
       "max_params": null,
@@ -83,8 +83,8 @@
     {
       "name": "CallbackFree",
       "registry": "sMdFunc",
-      "signature": "CallbackFree(MdType(8))",
-      "arguments": "MdType(8)",
+      "signature": "CallbackFree(UInt64)",
+      "arguments": "UInt64",
       "min_params": null,
       "max_params": null,
       "variadic": false,
@@ -1191,14 +1191,14 @@
     {
       "name": "EditGetCurrentLine",
       "registry": "sMdFunc",
-      "signature": "EditGetCurrentLine(Variant, [, Variant], [, String], [, String], [, String])  -> MdType(8)",
+      "signature": "EditGetCurrentLine(Variant, [, Variant], [, String], [, String], [, String])  -> UInt64",
       "arguments": [
         "Variant",
         "Opt Variant",
         "Opt String",
         "Opt String",
         "Opt String",
-        "Out_Ret MdType(8)"
+        "Out_Ret UInt64"
       ],
       "min_params": null,
       "max_params": null,
@@ -1226,14 +1226,14 @@
     {
       "name": "EditGetLineCount",
       "registry": "sMdFunc",
-      "signature": "EditGetLineCount(Variant, [, Variant], [, String], [, String], [, String])  -> MdType(8)",
+      "signature": "EditGetLineCount(Variant, [, Variant], [, String], [, String], [, String])  -> UInt64",
       "arguments": [
         "Variant",
         "Opt Variant",
         "Opt String",
         "Opt String",
         "Opt String",
-        "Out_Ret MdType(8)"
+        "Out_Ret UInt64"
       ],
       "min_params": null,
       "max_params": null,
@@ -1915,9 +1915,9 @@
     {
       "name": "IL_Add",
       "registry": "sMdFunc",
-      "signature": "IL_Add(MdType(8), String, [, Int32], [, Bool32])  -> Int32",
+      "signature": "IL_Add(UInt64, String, [, Int32], [, Bool32])  -> Int32",
       "arguments": [
-        "MdType(8)",
+        "UInt64",
         "String",
         "Opt Int32",
         "Opt Bool32",
@@ -1945,8 +1945,8 @@
     {
       "name": "IL_Destroy",
       "registry": "sMdFunc",
-      "signature": "IL_Destroy(MdType(8))",
-      "arguments": "MdType(8)",
+      "signature": "IL_Destroy(UInt64)",
+      "arguments": "UInt64",
       "min_params": null,
       "max_params": null,
       "variadic": false,
@@ -2316,12 +2316,12 @@
     {
       "name": "LoadPicture",
       "registry": "sMdFunc",
-      "signature": "LoadPicture(String, [, String], [, Int32])  -> MdType(8)",
+      "signature": "LoadPicture(String, [, String], [, Int32])  -> UInt64",
       "arguments": [
         "String",
         "Opt String",
         "Out_Opt Int32",
-        "Out_Ret MdType(8)"
+        "Out_Ret UInt64"
       ],
       "min_params": null,
       "max_params": null,
@@ -2361,9 +2361,9 @@
     {
       "name": "MenuFromHandle",
       "registry": "sMdFunc",
-      "signature": "MenuFromHandle(MdType(8))  -> Object",
+      "signature": "MenuFromHandle(UInt64)  -> Object",
       "arguments": [
-        "MdType(8)",
+        "UInt64",
         "Out_Ret Object"
       ],
       "min_params": null,
@@ -2645,10 +2645,10 @@
     {
       "name": "ObjGetDataPtr",
       "registry": "sMdFunc",
-      "signature": "ObjGetDataPtr(Object)  -> MdType(8)",
+      "signature": "ObjGetDataPtr(Object)  -> UInt64",
       "arguments": [
         "Object",
-        "Out_Ret MdType(8)"
+        "Out_Ret UInt64"
       ],
       "min_params": null,
       "max_params": null,
@@ -2658,10 +2658,10 @@
     {
       "name": "ObjGetDataSize",
       "registry": "sMdFunc",
-      "signature": "ObjGetDataSize(Object)  -> MdType(8)",
+      "signature": "ObjGetDataSize(Object)  -> UInt64",
       "arguments": [
         "Object",
-        "Out_Ret MdType(8)"
+        "Out_Ret UInt64"
       ],
       "min_params": null,
       "max_params": null,
@@ -2751,10 +2751,10 @@
     {
       "name": "ObjSetDataPtr",
       "registry": "sMdFunc",
-      "signature": "ObjSetDataPtr(Object, MdType(8))",
+      "signature": "ObjSetDataPtr(Object, UInt64)",
       "arguments": [
         "Object",
-        "MdType(8)"
+        "UInt64"
       ],
       "min_params": null,
       "max_params": null,
@@ -3237,7 +3237,7 @@
     {
       "name": "SendMessage",
       "registry": "sMdFunc",
-      "signature": "SendMessage(UInt32, [, Variant], [, Variant], [, Variant], [, Variant], [, String], [, String], [, String], [, Int32])  -> MdType(8)",
+      "signature": "SendMessage(UInt32, [, Variant], [, Variant], [, Variant], [, Variant], [, String], [, String], [, String], [, Int32])  -> UInt64",
       "arguments": [
         "UInt32",
         "Opt Variant",
@@ -3248,7 +3248,7 @@
         "Opt String",
         "Opt String",
         "Opt Int32",
-        "Out_Ret MdType(8)"
+        "Out_Ret UInt64"
       ],
       "min_params": null,
       "max_params": null,

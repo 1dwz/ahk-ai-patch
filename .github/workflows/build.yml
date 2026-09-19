@@ -218,6 +218,13 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File tools/test-console-visibility.ps1 -Exe dist/AutoHotkey64.exe
 
+      # The hand-written HTTP/JSON guide ships in the artifact, so its claims are
+      # part of what a downloading user relies on.  Nothing else validates them:
+      # the generated index only lists signatures for upstream functions.
+      - name: Assert the shipped guide matches the built interpreter
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/test-doc-claims.ps1 -Exe dist/AutoHotkey64.exe
+
       # /dump-api is what the documentation generator reads, so a regression in
       # it silently produces wrong docs.  Assert the registry counts, the
       # patched functions, and that the expected arity is reported.

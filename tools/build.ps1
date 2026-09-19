@@ -135,17 +135,60 @@ if (Test-Path $built) {
         # of the build we just produced.  Doing it here means the docs can
         # never describe a different build than the one shipped, and it works
         # for a consumer who only downloads the artifact.
+        # The generated index can only list signatures.  The three functions this
+        # patch set adds take an options object whose real surface no signature
+        # table can express, so the hand-written guide ships beside the
+        # executable -- otherwise BUILTIN_API.md links to a file the downloader
+        # does not have.
+        #
+        # Copy the guide FIRST so the generator's -GuideLink can be a verified
+        # sibling filename rather than a guess.
+        $guideCopied = $false
+        foreach ($guide in 'BUILTIN_HTTP_JSON.md') {
+            $src = Join-Path $RepoRoot "docs\$guide"
+            if (Test-Path $src) {
+                Copy-Item $src (Join-Path $OutDir $guide) -Force
+                Write-Output "Docs    : $guide"
+                $guideCopied = $true
+            } else {
+                Write-Warning "hand-written guide missing: $src"
+            }
+        }
+
         $gen = Join-Path $RepoRoot 'tools\gen-builtin-docs.ps1'
         if (Test-Path $gen) {
             try {
-                & $gen -RepoRoot $RepoRoot -Exe (Join-Path $OutDir $exeName) `
-                    -Markdown (Join-Path $OutDir 'BUILTIN_API.md') `
-                    -Json (Join-Path $OutDir 'builtin-api.json') -Quiet
+                $genArgs = @{
+                    RepoRoot  = $RepoRoot
+                    Exe       = (Join-Path $OutDir $exeName)
+                    Markdown  = (Join-Path $OutDir 'BUILTIN_API.md')
+                    Json      = (Join-Path $OutDir 'builtin-api.json')
+                    Quiet     = $true
+                }
+                if ($guideCopied) { $genArgs['GuideLink'] = 'BUILTIN_HTTP_JSON.md' }
+                & $gen @genArgs
                 Write-Output "Docs    : BUILTIN_API.md + builtin-api.json ($LASTEXITCODE)"
             } catch {
                 # Documentation must never fail a build; the binary is the
                 # deliverable and this is a derived artifact.
                 Write-Warning "could not generate the API reference: $($_.Exception.Message)"
+            }
+        }
+
+        # The hand-written guide ships beside the executable and makes concrete
+        # claims the generated index cannot check.  Warn rather than fail, for
+        # the same reason as the other documentation steps.
+        $docTest = Join-Path $RepoRoot 'tools\test-doc-claims.ps1'
+        if (Test-Path $docTest) {
+            try {
+                & $docTest -Exe (Join-Path $OutDir $exeName) -RepoRoot $RepoRoot
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Output 'Docs    : documented claims match the build'
+                } else {
+                    Write-Warning "documented claims do NOT match the build ($LASTEXITCODE)"
+                }
+            } catch {
+                Write-Warning "doc claim check could not run: $($_.Exception.Message)"
             }
         }
 

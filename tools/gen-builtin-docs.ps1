@@ -32,6 +32,7 @@ param(
     [string]$OutDir,
     [string]$Markdown,
     [string]$Json,
+    [string]$GuideLink,
     [switch]$Quiet
 )
 
@@ -50,6 +51,15 @@ $Exe = (Resolve-Path $Exe).Path
 if (-not $OutDir) { $OutDir = Join-Path $RepoRoot 'docs\api' }
 if (-not $Markdown) { $Markdown = Join-Path $OutDir 'RUNTIME_API.md' }
 if (-not $Json) { $Json = Join-Path $OutDir 'builtin-api.json' }
+
+# Where to point readers for the hand-written HTTP/JSON guide, relative to
+# $Markdown.  Defaults to a sibling copy, which is what build.ps1 produces in
+# dist/; docs/api/ keeps the guide one level up.  Verified by the caller rather
+# than assumed, because a link to a file that is not there is worse than none.
+if (-not $GuideLink) {
+    $candidate = Join-Path (Split-Path -Parent $Markdown) 'BUILTIN_HTTP_JSON.md'
+    $GuideLink = if (Test-Path $candidate) { 'BUILTIN_HTTP_JSON.md' } else { '../BUILTIN_HTTP_JSON.md' }
+}
 
 # --- ask the interpreter ---------------------------------------------------
 # Invoke-AhkAi runs the process with a timeout and captures real stderr, which
@@ -184,7 +194,7 @@ function Get-Signature {
 }
 
 function Get-Doc {
-    param($AllNames, $Arity, $Typed, $Manual, [string]$ExePath)
+    param($AllNames, $Arity, $Typed, $Manual, [string]$ExePath, [string]$GuideLink = 'BUILTIN_HTTP_JSON.md')
 
     $sb = New-Object System.Text.StringBuilder
     [void]$sb.AppendLine('# Built-in API of this build')
@@ -210,12 +220,17 @@ function Get-Doc {
     # A few functions deserve a pointer to the hand-written option reference,
     # because their real surface is an options object that no signature table
     # can express.
+    #
+    # The link is passed in ($GuideLink) rather than hard-coded, because the same
+    # document is written to different directories: build.ps1 copies the guide
+    # next to the output so a bare filename works in dist/, while docs/api/ has
+    # the guide one level up.  Hard-coding either form breaks the other.
     $hasOptions = @($AllNames | Where-Object { $Manual.Contains($_) })
     if ($hasOptions.Count) {
         [void]$sb.AppendLine('> `HttpRequest`, `JsonParse` and `JsonStringify` are added by this patch')
         [void]$sb.AppendLine('> set. Their signatures are listed below, but their behaviour and the')
         [void]$sb.AppendLine('> `HttpRequest` options object are documented by hand in')
-        [void]$sb.AppendLine('> [docs/BUILTIN_HTTP_JSON.md](../BUILTIN_HTTP_JSON.md) -- read that before using them.')
+        [void]$sb.AppendLine("> [$GuideLink]($GuideLink) -- read that before using them.")
         [void]$sb.AppendLine()
     }
 
@@ -274,7 +289,7 @@ function Write-TextLf([string]$Path, [string]$Text) {
     [System.IO.File]::WriteAllText($Path, ($Text -replace "`r`n", "`n"), (New-Object System.Text.UTF8Encoding($false)))
 }
 
-$docText = Get-Doc -AllNames $allNames -Arity $arity -Typed $typed -Manual $manualSignatures -ExePath $Exe
+$docText = Get-Doc -AllNames $allNames -Arity $arity -Typed $typed -Manual $manualSignatures -ExePath $Exe -GuideLink $GuideLink
 Write-TextLf $Markdown $docText
 
 $payload = [pscustomobject]@{

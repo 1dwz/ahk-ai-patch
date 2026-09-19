@@ -20,7 +20,7 @@ argument must be. `[, x]` marks an optional argument.
 > `HttpRequest`, `JsonParse` and `JsonStringify` are added by this patch
 > set. Their signatures are listed below, but their behaviour and the
 > `HttpRequest` options object are documented by hand in
-> [docs/BUILTIN_HTTP_JSON.md](../BUILTIN_HTTP_JSON.md) -- read that before using them.
+> [../BUILTIN_HTTP_JSON.md](../BUILTIN_HTTP_JSON.md) -- read that before using them.
 
 ## All functions
 
@@ -32,8 +32,8 @@ argument must be. `[, x]` marks an optional argument.
 | `ATan` | `ATan(arg1)` | g_BIF |
 | `ATan2` | `ATan2(arg1, arg2)` | g_BIF |
 | `BlockInput` | `BlockInput(String)` | sMdFunc |
-| `CallbackCreate` | `CallbackCreate(Object, [, String], [, Variant])  -> MdType(8)` | sMdFunc |
-| `CallbackFree` | `CallbackFree(MdType(8))` | sMdFunc |
+| `CallbackCreate` | `CallbackCreate(Object, [, String], [, Variant])  -> UInt64` | sMdFunc |
+| `CallbackFree` | `CallbackFree(UInt64)` | sMdFunc |
 | `CaretGetPos` | `CaretGetPos([, Variant], [, Variant])` | sMdFunc |
 | `Ceil` | `Ceil(arg1)` | g_BIF |
 | `Chr` | `Chr(arg1)` | g_BIF |
@@ -112,9 +112,9 @@ argument must be. `[, x]` marks an optional argument.
 | `DriveUnlock` | `DriveUnlock(String)` | sMdFunc |
 | `Edit` | `Edit([, String])` | sMdFunc |
 | `EditGetCurrentCol` | `EditGetCurrentCol(Variant, [, Variant], [, String], [, String], [, String])  -> UInt32` | sMdFunc |
-| `EditGetCurrentLine` | `EditGetCurrentLine(Variant, [, Variant], [, String], [, String], [, String])  -> MdType(8)` | sMdFunc |
+| `EditGetCurrentLine` | `EditGetCurrentLine(Variant, [, Variant], [, String], [, String], [, String])  -> UInt64` | sMdFunc |
 | `EditGetLine` | `EditGetLine(IntPtr, Variant, [, Variant], [, String], [, String], [, String])  -> String` | sMdFunc |
-| `EditGetLineCount` | `EditGetLineCount(Variant, [, Variant], [, String], [, String], [, String])  -> MdType(8)` | sMdFunc |
+| `EditGetLineCount` | `EditGetLineCount(Variant, [, Variant], [, String], [, String], [, String])  -> UInt64` | sMdFunc |
 | `EditGetSelectedText` | `EditGetSelectedText(Variant, [, Variant], [, String], [, String], [, String])  -> String` | sMdFunc |
 | `EditPaste` | `EditPaste(String, Variant, [, Variant], [, String], [, String], [, String])` | sMdFunc |
 | `EnvGet` | `EnvGet(String)  -> String` | sMdFunc |
@@ -167,9 +167,9 @@ argument must be. `[, x]` marks an optional argument.
 | `Hotkey` | `Hotkey(String, [, Variant], [, String])` | sMdFunc |
 | `Hotstring` | `Hotstring(String, [, Variant], [, String])  -> Variant` | sMdFunc |
 | `HttpRequest` | `HttpRequest(url, [, options])  -> Map` | declared in the patch |
-| `IL_Add` | `IL_Add(MdType(8), String, [, Int32], [, Bool32])  -> Int32` | sMdFunc |
+| `IL_Add` | `IL_Add(UInt64, String, [, Int32], [, Bool32])  -> Int32` | sMdFunc |
 | `IL_Create` | `IL_Create([, Int32], [, Int32], [, Bool32])` | sMdFunc |
-| `IL_Destroy` | `IL_Destroy(MdType(8))` | sMdFunc |
+| `IL_Destroy` | `IL_Destroy(UInt64)` | sMdFunc |
 | `ImageSearch` | `ImageSearch([, Variant], [, Variant], Int32, Int32, Int32, Int32, String)  -> Bool32` | sMdFunc |
 | `IniDelete` | `IniDelete(String, String, [, String])` | sMdFunc |
 | `IniRead` | `IniRead(String, [, String], [, String], [, String])  -> String` | sMdFunc |
@@ -201,11 +201,11 @@ argument must be. `[, x]` marks an optional argument.
 | `ListVars` | `ListVars()` | sMdFunc |
 | `ListViewGetContent` | `ListViewGetContent([, String], Variant, [, Variant], [, String], [, String], [, String])  -> Variant` | sMdFunc |
 | `Ln` | `Ln(arg1)` | g_BIF |
-| `LoadPicture` | `LoadPicture(String, [, String], [, Int32])  -> MdType(8)` | sMdFunc |
+| `LoadPicture` | `LoadPicture(String, [, String], [, Int32])  -> UInt64` | sMdFunc |
 | `Log` | `Log(arg1)` | g_BIF |
 | `LTrim` | `LTrim(arg1)` | g_BIF |
 | `Max` | `Max(arg1, ...)` | g_BIF |
-| `MenuFromHandle` | `MenuFromHandle(MdType(8))  -> Object` | sMdFunc |
+| `MenuFromHandle` | `MenuFromHandle(UInt64)  -> Object` | sMdFunc |
 | `MenuSelect` | `MenuSelect([, Variant], [, String], String, [, String], [, String], [, String], [, String], [, String], [, String], [, String], [, String])` | sMdFunc |
 | `Min` | `Min(arg1, ...)` | g_BIF |
 | `Mod` | `Mod(arg1, arg2)` | g_BIF |
@@ -227,8 +227,8 @@ argument must be. `[, x]` marks an optional argument.
 | `ObjFromPtrAddRef` | `ObjFromPtrAddRef(arg1)` | g_BIF |
 | `ObjGetBase` | `ObjGetBase(arg1)` | g_BIF |
 | `ObjGetCapacity` | `ObjGetCapacity(arg1)` | g_BIF |
-| `ObjGetDataPtr` | `ObjGetDataPtr(Object)  -> MdType(8)` | sMdFunc |
-| `ObjGetDataSize` | `ObjGetDataSize(Object)  -> MdType(8)` | sMdFunc |
+| `ObjGetDataPtr` | `ObjGetDataPtr(Object)  -> UInt64` | sMdFunc |
+| `ObjGetDataSize` | `ObjGetDataSize(Object)  -> UInt64` | sMdFunc |
 | `ObjHasOwnProp` | `ObjHasOwnProp(arg1, arg2)` | g_BIF |
 | `ObjOwnPropCount` | `ObjOwnPropCount(arg1)` | g_BIF |
 | `ObjOwnProps` | `ObjOwnProps(arg1)` | g_BIF |
@@ -237,7 +237,7 @@ argument must be. `[, x]` marks an optional argument.
 | `ObjRelease` | `ObjRelease(arg1)` | g_BIF |
 | `ObjSetBase` | `ObjSetBase(arg1, arg2)` | g_BIF |
 | `ObjSetCapacity` | `ObjSetCapacity(arg1, arg2)` | g_BIF |
-| `ObjSetDataPtr` | `ObjSetDataPtr(Object, MdType(8))` | sMdFunc |
+| `ObjSetDataPtr` | `ObjSetDataPtr(Object, UInt64)` | sMdFunc |
 | `OnClipboardChange` | `OnClipboardChange(Object, [, Int32])` | sMdFunc |
 | `OnError` | `OnError(Object, [, Int32])` | sMdFunc |
 | `OnExit` | `OnExit(Object, [, Int32])` | sMdFunc |
@@ -276,7 +276,7 @@ argument must be. `[, x]` marks an optional argument.
 | `SendEvent` | `SendEvent(String)` | sMdFunc |
 | `SendInput` | `SendInput(String)` | sMdFunc |
 | `SendLevel` | `SendLevel(Int32)  -> Int32` | sMdFunc |
-| `SendMessage` | `SendMessage(UInt32, [, Variant], [, Variant], [, Variant], [, Variant], [, String], [, String], [, String], [, Int32])  -> MdType(8)` | sMdFunc |
+| `SendMessage` | `SendMessage(UInt32, [, Variant], [, Variant], [, Variant], [, Variant], [, String], [, String], [, String], [, Int32])  -> UInt64` | sMdFunc |
 | `SendMode` | `SendMode(String)  -> Variant` | sMdFunc |
 | `SendPlay` | `SendPlay(String)` | sMdFunc |
 | `SendText` | `SendText(String)` | sMdFunc |
