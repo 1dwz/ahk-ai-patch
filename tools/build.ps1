@@ -148,6 +148,36 @@ if (Test-Path $built) {
                 Write-Warning "could not generate the API reference: $($_.Exception.Message)"
             }
         }
+
+        # /AI is only useful if the diagnostics are actually visible, and
+        # AutoHotkey.exe is a GUI-subsystem binary, so that depends on
+        # AttachConsole.  Warn (do not fail) if a bare console shows nothing --
+        # see tools/test-console-visibility.ps1 for why a plain pipe cannot
+        # detect this.
+        #
+        # The check must NOT have its output captured or piped: doing so gives
+        # the console-owning launcher a redirected stdout and it can no longer
+        # observe a real console, so it always reports failure.  Redirect it to
+        # a temp file instead and read that back, leaving its handles alone.
+        $visTest = Join-Path $RepoRoot 'tools\test-console-visibility.ps1'
+        if (Test-Path $visTest) {
+            $visLog = Join-Path $env:TEMP ('ahk-visibility-{0}.txt' -f ([guid]::NewGuid().ToString('N')))
+            try {
+                & $visTest -Exe (Join-Path $OutDir $exeName) -RepoRoot $RepoRoot *> $visLog
+                $visCode = $LASTEXITCODE
+                $visOut = if (Test-Path $visLog) { Get-Content $visLog -Raw } else { '' }
+                if ($visCode -eq 0 -and $visOut -match 'OK: /AI diagnostics are visible') {
+                    Write-Output 'Console : /AI diagnostics visible on a bare console'
+                } else {
+                    Write-Warning "/AI diagnostics are NOT visible on a bare console (exit $visCode)"
+                    ($visOut -split "`r?`n") | Where-Object { $_ } | ForEach-Object { Write-Warning "  $_" }
+                }
+            } catch {
+                Write-Warning "console visibility check could not run: $($_.Exception.Message)"
+            } finally {
+                Remove-Item $visLog -Force -ErrorAction SilentlyContinue
+            }
+        }
     }
 } else {
     Write-Warning "Build reported success but $built is missing."

@@ -1,5 +1,5 @@
 diff --git a/source/AutoHotkey.cpp b/source/AutoHotkey.cpp
-index 02936c36..af6132bf 100644
+index 02936c36..2e3e9bad 100644
 --- a/source/AutoHotkey.cpp
 +++ b/source/AutoHotkey.cpp
 @@ -32,6 +32,9 @@ ResultType InitForExecution();
@@ -153,19 +153,33 @@ index 02936c36..af6132bf 100644
  		return CRITICAL_ERROR;
  
  	UINT load_result = g_script.LoadFromFile(script_filespec);
-@@ -130,6 +258,11 @@ ResultType ParseCmdLineArgs(LPTSTR &script_filespec)
+@@ -130,6 +258,25 @@ ResultType ParseCmdLineArgs(LPTSTR &script_filespec)
  			g_script.mIsRestart = true;
  		else if (!_tcsicmp(param, _T("/force")))
  			g_ForceLaunch = true;
 +		else if (!_tcsicmp(param, _T("/AI")) || !_tcsicmp(param, _T("/NonInteractive")))
 +		{
++			// AutoHotkey.exe is a Windows GUI subsystem binary, so when it is started
++			// from a console without redirection it does NOT inherit that console
++			// and GetStdHandle(STD_ERROR_HANDLE) yields a handle nobody can see.
++			// Diagnostics were therefore discarded in exactly the case this switch
++			// exists for: a human (or agent) running `AutoHotkey.exe /AI script.ahk`
++			// in a terminal with no 2> redirection.  Attaching to the parent
++			// console makes stderr visible again.  It fails harmlessly (returns 0)
++			// when there is no parent console, e.g. under a service or a GUI
++			// launcher, and it does not disturb an already-valid redirected handle.
++			if (!AttachConsole(ATTACH_PARENT_PROCESS))
++			{
++				// Fall back to the console of this process, if any.
++				AttachConsole(GetCurrentProcessId());
++			}
 +			g_script.SetNonInteractive();
 +			g_script.SetErrorStdOut(NULL);
 +		}
  #ifndef AUTOHOTKEYSC // i.e. the following switch is recognized only by AutoHotkey.exe (especially since recognizing new switches in compiled scripts can break them, unlike AutoHotkey.exe).
  		else if (!_tcsicmp(param, _T("/script")))
  			script_filespec = NULL; // Override compiled script mode, otherwise no effect.
-@@ -147,6 +280,15 @@ ResultType ParseCmdLineArgs(LPTSTR &script_filespec)
+@@ -147,6 +294,15 @@ ResultType ParseCmdLineArgs(LPTSTR &script_filespec)
  		}
  		else if (!_tcsicmp(param, _T("/validate")))
  			g_script.mValidateThenExit = true;
@@ -181,7 +195,7 @@ index 02936c36..af6132bf 100644
  		// DEPRECATED: /iLib
  		else if (!_tcsicmp(param, _T("/iLib"))) // v1.0.47: Build an include-file so that ahk2exe can include library functions called by the script.
  		{
-@@ -221,10 +363,20 @@ ResultType CheckPriorInstance()
+@@ -221,10 +377,20 @@ ResultType CheckPriorInstance()
  			if (g_AllowOnlyOneInstance == SINGLE_INSTANCE_IGNORE)
  				return EARLY_EXIT;
  			if (g_AllowOnlyOneInstance != SINGLE_INSTANCE_REPLACE)
@@ -202,7 +216,7 @@ index 02936c36..af6132bf 100644
  			// Otherwise:
  			reason_to_close_prior = AHK_EXIT_BY_SINGLEINSTANCE;
  		}
-@@ -255,6 +407,11 @@ ResultType CheckPriorInstance()
+@@ -255,6 +421,11 @@ ResultType CheckPriorInstance()
  				// This can happen if the previous instance has an OnExit function that takes a long
  				// time to finish, or if it's waiting for a network drive to timeout or some other
  				// operation in which it's thread is occupied.

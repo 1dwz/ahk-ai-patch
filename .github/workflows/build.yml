@@ -209,6 +209,15 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File tools/test-noninteractive.ps1 -Exe dist/AutoHotkey64.exe
 
+      # The smoke test always redirects stderr into a pipe, so it can only prove
+      # the diagnostic BYTES exist -- not that a human typing the command would
+      # ever see them.  AutoHotkey.exe is a GUI-subsystem binary, so those are
+      # genuinely different questions, and this step owns a real console to ask
+      # the second one.
+      - name: Assert /AI diagnostics are visible on a bare console
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/test-console-visibility.ps1 -Exe dist/AutoHotkey64.exe
+
       # /dump-api is what the documentation generator reads, so a regression in
       # it silently produces wrong docs.  Assert the registry counts, the
       # patched functions, and that the expected arity is reported.

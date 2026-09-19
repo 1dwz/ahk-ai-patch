@@ -2,17 +2,26 @@
 <#
 Smoke-test the /AI (non-interactive) contract of a patched AutoHotkey.
 
-This is THE verification tool for this repo: it runs the real interpreter and
-asserts, for every error category, that
+This script runs the real interpreter and asserts, for every error category,
+that
   * the process exits within the timeout (i.e. no dialog is blocking),
   * diagnostics arrive on stderr,
   * the exit code matches the documented policy,
   * normal output still goes to stdout.
 
+It is NOT sufficient on its own.  It always redirects stderr into a pipe (via
+Invoke-AhkAi), so it proves the diagnostic BYTES exist but cannot tell whether a
+human would ever SEE them on a bare console.  AutoHotkey.exe is a
+gui-subsystem binary, so that distinction is real and was a genuine bug: /AI
+printed nothing at all in a terminal until AttachConsole was added.  Any claim
+about output being visible needs tools/test-console-visibility.ps1 as well,
+which owns a real console instead of redirecting one.
+
 Usage:
   pwsh -NoProfile -File tools/test-noninteractive.ps1
   pwsh -NoProfile -File tools/test-noninteractive.ps1 -Exe dist\AutoHotkey64.exe
   pwsh -NoProfile -File tools/test-noninteractive.ps1 -Exe "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
+  pwsh -NoProfile -File tools/test-console-visibility.ps1 -Exe dist\AutoHotkey64.exe   # visibility
 #>
 [CmdletBinding()]
 param(
