@@ -170,29 +170,34 @@ static class AhkUninstall
         }
         else
         {
-            // Nothing to restore.  This is expected on a machine that never had
-            // AutoHotkey, and it is NOT a failure: writing a path to a missing
-            // launcher would leave .ahk files opening a nonexistent program.
-            // But if the association still points into our install directory,
-            // that is a real problem and must be reported.
-            string stillOurs = null;
+            // Nothing to restore, so the association must not be left pointing
+            // at a program we just deleted.  Remove what we set rather than
+            // leaving a dangling command: .ahk files then fall back to asking
+            // the user, which is honest, instead of failing with a confusing
+            // "cannot find the file" error.
             try
             {
-                using (var k = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Classes\" + ProgId + @"\shell\open\command"))
-                    if (k != null) stillOurs = k.GetValue(null) as string;
+                using (var k = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Classes\" + ProgId + @"\shell", writable: true))
+                {
+                    if (k != null)
+                    {
+                        try { k.DeleteSubKeyTree("open", false); } catch { }
+                        try { k.DeleteSubKeyTree("edit", false); } catch { }
+                    }
+                }
+                using (var k = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Classes\" + ProgId, writable: true))
+                {
+                    if (k != null) { try { k.DeleteValue("", false); } catch { } }
+                }
+                ShellChangeNotify();
+                if (!quiet) Console.WriteLine("assoc      : removed (no upstream launcher to restore)");
+                return 0;
             }
-            catch { }
-
-            if (stillOurs != null && stillOurs.IndexOf(InstallDir, StringComparison.OrdinalIgnoreCase) >= 0)
+            catch (Exception ex)
             {
-                Console.Error.WriteLine("  the .ahk association still points at the removed install:");
-                Console.Error.WriteLine("    " + stillOurs);
-                Console.Error.WriteLine("  no upstream launcher was found to restore, so it was left as-is");
+                Console.Error.WriteLine("  could not clear the association: " + ex.Message);
                 return 1;
             }
-
-            if (!quiet) Console.WriteLine("assoc      : no prior association to restore (left unset)");
-            return 0;
         }
 
         try
