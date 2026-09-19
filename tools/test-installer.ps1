@@ -39,13 +39,25 @@ function Check([string] $name, [bool] $ok, [string] $detail = '') {
 }
 
 function Get-MachinePath {
-    (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment' -Name Path).Path
+    $v = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment' -Name Path -EA SilentlyContinue).Path
+    if ($null -eq $v) { return '' }
+    return $v
 }
 
+# Every read here is tolerant on purpose: on a clean CI runner AutoHotkey has
+# never been installed, so these keys legitimately do not exist.  Under
+# Set-StrictMode a missing property throws, which would fail the test for
+# "nothing was installed yet" rather than for a real problem.
 function Get-AhkAssoc {
-    $v = (Get-ItemProperty 'HKLM:\SOFTWARE\Classes\.ahk' -EA SilentlyContinue).'(default)'
-    $c = (Get-ItemProperty 'HKLM:\SOFTWARE\Classes\AutoHotkeyScript\shell\open\command' -EA SilentlyContinue).'(default)'
-    [pscustomobject]@{ ProgId = $v; Command = $c }
+    $progId = $null
+    $cmd = $null
+    $k = Get-ItemProperty 'HKLM:\SOFTWARE\Classes\.ahk' -EA SilentlyContinue
+    if ($null -ne $k) { $progId = $k.PSObject.Properties['(default)'].Value }
+
+    $c = Get-ItemProperty 'HKLM:\SOFTWARE\Classes\AutoHotkeyScript\shell\open\command' -EA SilentlyContinue
+    if ($null -ne $c) { $cmd = $c.PSObject.Properties['(default)'].Value }
+
+    [pscustomobject]@{ ProgId = $progId; Command = $cmd }
 }
 
 $isAdmin = (New-Object Security.Principal.WindowsPrincipal(
