@@ -170,11 +170,29 @@ static class AhkUninstall
         }
         else
         {
-            // Nothing to point at.  Say so instead of writing a dead path that
-            // would make double-click fail with a confusing error later.
-            Console.Error.WriteLine("  no upstream launcher or v2 interpreter found;");
-            Console.Error.WriteLine("  leaving the .ahk association as-is so it does not become unusable");
-            return 1;
+            // Nothing to restore.  This is expected on a machine that never had
+            // AutoHotkey, and it is NOT a failure: writing a path to a missing
+            // launcher would leave .ahk files opening a nonexistent program.
+            // But if the association still points into our install directory,
+            // that is a real problem and must be reported.
+            string stillOurs = null;
+            try
+            {
+                using (var k = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Classes\" + ProgId + @"\shell\open\command"))
+                    if (k != null) stillOurs = k.GetValue(null) as string;
+            }
+            catch { }
+
+            if (stillOurs != null && stillOurs.IndexOf(InstallDir, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                Console.Error.WriteLine("  the .ahk association still points at the removed install:");
+                Console.Error.WriteLine("    " + stillOurs);
+                Console.Error.WriteLine("  no upstream launcher was found to restore, so it was left as-is");
+                return 1;
+            }
+
+            if (!quiet) Console.WriteLine("assoc      : no prior association to restore (left unset)");
+            return 0;
         }
 
         try

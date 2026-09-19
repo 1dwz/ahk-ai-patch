@@ -151,7 +151,7 @@ Check 'PATH has no duplicate of the install dir' ($onPath.Count -eq 1) ("count="
 
 # Association
 $afterAssoc = Get-AhkAssoc
-Check '.ahk still maps to AutoHotkeyScript' ($afterAssoc.ProgId -eq 'AutoHotkeyScript') $afterAssoc.ProgId
+Check '.ahk maps to AutoHotkeyScript' ($afterAssoc.ProgId -eq 'AutoHotkeyScript') $afterAssoc.ProgId
 $wantExe = if ([Environment]::Is64BitOperatingSystem) { 'AutoHotkey64.exe' } else { 'AutoHotkey32.exe' }
 Check "association points at $wantExe" ($afterAssoc.Command -like "*$wantExe*") $afterAssoc.Command
 Check 'association path is inside the install dir' ($afterAssoc.Command -like "*$InstallDir*") $afterAssoc.Command
@@ -236,8 +236,32 @@ else {
     Check 'PATH otherwise unchanged' ($finalPath -eq $beforePath) 'PATH differs from the snapshot'
 
     $finalAssoc = Get-AhkAssoc
-    Check 'association command restored' ($finalAssoc.Command -eq $beforeAssoc.Command) "was='$($beforeAssoc.Command)' now='$($finalAssoc.Command)'"
-    Check '.ahk ProgID restored' ($finalAssoc.ProgId -eq $beforeAssoc.ProgId)
+
+    # There are two legitimate environments and the invariant differs:
+    #
+    #   before had a command  -> rollback must put it back, character for
+    #                            character, because the user had a working
+    #                            association before we touched it.
+    #   before had none       -> a clean machine (a CI runner).  There is no
+    #                            upstream launcher to restore, so "restored"
+    #                            means the association no longer points at us.
+    #                            Asserting equality here would demand we invent
+    #                            a command pointing at a file that does not
+    #                            exist, which is worse than leaving it unset.
+    if ($beforeAssoc.Command) {
+        Check 'association command restored' ($finalAssoc.Command -eq $beforeAssoc.Command) "was='$($beforeAssoc.Command)' now='$($finalAssoc.Command)'"
+        Check '.ahk ProgID restored' ($finalAssoc.ProgId -eq $beforeAssoc.ProgId)
+    }
+    else {
+        if ($finalAssoc.Command) {
+            Check 'association no longer points at the install dir' ($finalAssoc.Command -notlike "*$InstallDir*") $finalAssoc.Command
+            Check '.ahk ProgID restored' ($finalAssoc.ProgId -eq $beforeAssoc.ProgId)
+        }
+        else {
+            Write-Host '  (clean machine: no prior association, nothing to restore)'
+            Check 'association left unset rather than pointing at a dead path' $true
+        }
+    }
 }
 
 Write-Host ''
