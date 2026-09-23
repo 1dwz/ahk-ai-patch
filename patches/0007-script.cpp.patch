@@ -1,13 +1,7 @@
 diff --git a/source/script.cpp b/source/script.cpp
-index 80fb021d..06b2e582 100644
+index 80fb021d..e183d46b 100644
 --- a/source/script.cpp
 +++ b/source/script.cpp
-@@ -1,4 +1,4 @@
--﻿/*
-+/*
- AutoHotkey
- 
- Copyright 2003-2009 Chris Mallett (support@autohotkey.com)
 @@ -318,7 +318,7 @@ Script::Script()
  	, mFileSpec(_T("")), mFileDir(_T("")), mFileName(_T("")), mOurEXE(_T("")), mOurEXEDir(_T("")), mMainWindowTitle(_T(""))
  	, mScriptName(NULL)
@@ -51,7 +45,22 @@ index 80fb021d..06b2e582 100644
  
  	// Now that the auto-execute thread has finished, ensure that the very first g-item is always
  	// interruptible.  This avoids having to treat the first g-item as special in various places.
-@@ -1411,7 +1430,7 @@ UINT Script::LoadFromFile(LPCTSTR aFileSpec)
+@@ -1176,7 +1195,13 @@ ResultType Script::Edit(LPCTSTR aFileName)
+ 			// even without double quotes around them, it seems safer and more correct to always
+ 			// enclose the filename in double quotes for maximum compatibility with all OSes:
+ 			if (!ActionExec(_T("notepad.exe"), buf, mFileDir, false))
+-				MsgBox(_T("Could not open script.")); // Short message since so rare.
++			{
++				// ahk-ai patch: /AI never raises a window, not even for this.
++				if (mNonInteractive)
++					PrintNote(_T("Could not open script."));
++				else
++					MsgBox(_T("Could not open script.")); // Short message since so rare.
++			}
+ 		}
+ 	}
+ 	return OK;
+@@ -1411,7 +1436,7 @@ UINT Script::LoadFromFile(LPCTSTR aFileSpec)
  	DWORD attr = mKind == ScriptKindFile ? GetFileAttributes(aFileSpec) : 0; // v1.1.17: Don't check if reading script from stdin.
  	if (attr == MAXDWORD) // File does not exist or lacking the authorization to get its attributes.
  	{
@@ -60,7 +69,7 @@ index 80fb021d..06b2e582 100644
  		{
  			TCHAR buf[T_MAX_PATH + 24];
  			sntprintf(buf, _countof(buf), _T("%s\n%s"), ERR_SCRIPT_NOT_FOUND, aFileSpec);
-@@ -1420,7 +1439,17 @@ UINT Script::LoadFromFile(LPCTSTR aFileSpec)
+@@ -1420,7 +1445,17 @@ UINT Script::LoadFromFile(LPCTSTR aFileSpec)
  		else
  		{
  			Line::sSourceFile = &mFileSpec;
@@ -79,3 +88,16 @@ index 80fb021d..06b2e582 100644
  		}
  		return LOADING_FAILED;
  	}
+@@ -1942,7 +1977,11 @@ process_completed_line:
+ 					{
+ 						TCHAR msg_text[128];
+ 						sntprintf(msg_text, _countof(msg_text), _T("Note: The hotkey %s will not be active because it does not exist in the current keyboard layout."), static_cast<LPTSTR>(buf));
+-						MsgBox(msg_text);
++						// ahk-ai patch: a load-time note, so stderr rather than a window.
++						if (mNonInteractive)
++							PrintNote(msg_text);
++						else
++							MsgBox(msg_text);
+ 					}
+ 				}
+ 				*cp = *HOTKEY_FLAG; // Undo the temp. termination above.

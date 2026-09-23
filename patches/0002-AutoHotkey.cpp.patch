@@ -1,13 +1,7 @@
 diff --git a/source/AutoHotkey.cpp b/source/AutoHotkey.cpp
-index 02936c36..aa361a9b 100644
+index 02936c36..1192ad8e 100644
 --- a/source/AutoHotkey.cpp
 +++ b/source/AutoHotkey.cpp
-@@ -1,4 +1,4 @@
--﻿/*
-+/*
- AutoHotkey
- 
- Copyright 2003-2009 Chris Mallett (support@autohotkey.com)
 @@ -130,6 +130,25 @@ ResultType ParseCmdLineArgs(LPTSTR &script_filespec)
  			g_script.mIsRestart = true;
  		else if (!_tcsicmp(param, _T("/force")))

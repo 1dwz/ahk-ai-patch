@@ -33,6 +33,20 @@ param(
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AhkAi.psm1') -Force
 
+# The repository ships two interpreters and the multi-target suites accept
+# -Exe a,b, so accept it here too rather than leaving one command line that works
+# for some tests and silently means "one file named 'a,b'" for this one.
+$subjects = @($Exe -split '[,;]' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+if ($subjects.Count -gt 1) {
+    $rc = 0
+    foreach ($s in $subjects) {
+        & $PSCommandPath -RepoRoot $RepoRoot -Exe $s -TimeoutMs $TimeoutMs
+        if ($LASTEXITCODE) { $rc = $LASTEXITCODE }
+    }
+    exit $rc
+}
+if ($subjects.Count) { $Exe = $subjects[0] }
+
 if (-not $Exe) {
     foreach ($c in @(
         (Join-Path $RepoRoot 'dist\AutoHotkey64.exe'),

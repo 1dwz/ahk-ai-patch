@@ -59,11 +59,20 @@ if ($CheckOnly) {
     try {
         # Export the pristine tree from the object database rather than copying
         # the working tree, so local edits cannot make a stale patch look valid.
-        $tarPath = Join-Path $probeDir 'src.tar'
-        git -C $UpstreamDir archive --format=tar $pinned -o $tarPath 2>&1 | Out-Null
+        #
+        # zip + Expand-Archive rather than `git archive | tar`: PATH here resolves
+        # `tar` to Git's GNU tar, which reads a Windows drive letter as an RPC
+        # host ("Cannot connect to C: resolve failed") and exits 128.  The
+        # extraction was unchecked, so the probe directory stayed empty and every
+        # patch -- even a perfectly good series -- was reported as CONFLICT.
+        $zipPath = Join-Path $probeDir 'src.zip'
+        git -C $UpstreamDir archive --format=zip $pinned -o $zipPath 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "git archive failed for $pinned" }
-        tar -xf $tarPath -C $probeDir
-        Remove-Item $tarPath -Force
+        Expand-Archive -LiteralPath $zipPath -DestinationPath $probeDir -Force
+        Remove-Item $zipPath -Force
+        if (-not (Test-Path (Join-Path $probeDir 'source\error.cpp'))) {
+            throw "pristine tree did not unpack into $probeDir"
+        }
 
         # The unpacked tree has no repository; create one so `git apply` finds
         # its usual context (index, autocrlf settings, ...).

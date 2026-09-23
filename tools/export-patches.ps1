@@ -77,12 +77,23 @@ foreach ($f in $files) {
     $assigned[$key] = $num
     $name = '{0:0000}-{1}.patch' -f $num, $key
     $dest = Join-Path $OutDir $name
-    $d = @(git -C $ForkRepo diff HEAD -- $f)
-    # New files need --binary-free full content; git diff already emits a
-    # /dev/null -> b/... hunk that git apply recreates.
-    # git diff output already uses LF; write it without any translation.
-    [System.IO.File]::WriteAllText($dest, ($d -join "`n") + "`n", [System.Text.UTF8Encoding]::new($false))
-    Write-Output ("{0}  <- {1}  ({2} lines)" -f $name, $f, $d.Count)
+    # `--output` lets git write the file itself.  Capturing git's stdout into a
+    # PowerShell string instead decodes it with the console codepage (GBK on this
+    # box), which turned a UTF-8 BOM in a context line into mojibake and exported
+    # hunks that could never apply to a pristine tree.
+    git -C $ForkRepo diff HEAD --output=$dest -- $f
+    if ($LASTEXITCODE -ne 0) { throw "git diff failed for $f" }
+    $bytes = [System.IO.File]::ReadAllBytes($dest)
+    if (-not $bytes.Length) { throw "exported an empty patch for $f" }
+    # U+FFFD never appears in a genuine diff; if it does, something decoded
+    # git's bytes instead of copying them.
+    for ($i = 0; $i -lt ($bytes.Length - 2); $i++) {
+        if ($bytes[$i] -eq 0xEF -and $bytes[$i + 1] -eq 0xBF -and $bytes[$i + 2] -eq 0xBD) {
+            throw "patch for $f contains a U+FFFD replacement character: git output was decoded, not copied"
+        }
+    }
+    $lines = @($bytes | Where-Object { $_ -eq 0x0A }).Count
+    Write-Output ("{0}  <- {1}  ({2} lines)" -f $name, $f, $lines)
 }
 
 # A file that no longer differs leaves its old patch unstaged; report it so the

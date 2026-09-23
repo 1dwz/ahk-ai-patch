@@ -1,0 +1,59 @@
+diff --git a/source/script2.cpp b/source/script2.cpp
+index fc1216d3..ee107a03 100644
+--- a/source/script2.cpp
++++ b/source/script2.cpp
+@@ -2627,12 +2627,54 @@ bif_impl FResult Thread(StrArg aCommand, optl<int> aValue1, optl<int> aValue2)
+ 
+ 
+ 
++// ahk-ai patch: mirror OutputDebug() to the console.
++//
++// The stock function is either/or: a connected debugger client consumes the text
++// and OutputDebugString() is skipped.  A caller with neither a debugger nor
++// DebugView -- an agent running the script from a terminal -- therefore sees
++// nothing.  So write to stderr as well, which is where /AI puts diagnostics.
++static void OutputDebugMirrorToConsole(LPCTSTR aText)
++{
++	if (!aText || !*aText)
++		return;
++
++	// One attach per process, exactly like /AI does at startup, because
++	// AutoHotkey.exe is a GUI-subsystem binary and does not inherit the terminal
++	// it was started from.
++	//
++	// The handle must not be inspected first.  Measured for a GUI child of a real
++	// console: GetStdHandle returns a non-NULL, non-INVALID_HANDLE_VALUE handle
++	// that GetFileType even answers -- and every byte written to it vanishes,
++	// because the process owns no console.  That handle is indistinguishable from
++	// a correctly redirected one (both report FILE_TYPE_DISK and both fail
++	// GetConsoleMode), so any guard on it either misses the case or breaks
++	// redirection.  AttachConsole is the part that knows the difference: with
++	// redirected stderr it succeeds and leaves the handles untouched, and only for
++	// the unusable inherited handle does it replace them with the console's.
++	static bool sAttachTried = false;
++	if (!sAttachTried)
++	{
++		sAttachTried = true;
++		if (!AttachConsole(ATTACH_PARENT_PROCESS))
++			AttachConsole(GetCurrentProcessId());
++	}
++
++	int length = (int)_tcslen(aText);
++	g_script.WriteDiagnosticRaw(aText, length);
++	if (aText[length - 1] != _T('\n'))
++		g_script.WriteDiagnosticRaw(_T("\n"), 1);
++}
++
++
++
+ bif_impl void OutputDebug(StrArg aText)
+ {
+ #ifdef CONFIG_DEBUGGER
+ 	if (!g_Debugger.OutputStdErr(aText))
+ #endif
+ 		OutputDebugString(aText);
++
++	OutputDebugMirrorToConsole(aText);
+ }
+ 
+ 

@@ -2,8 +2,8 @@
 #
 # Read by BOTH tools/build.ps1 (to warn when a build's output drifts) and the CI
 # verify job (to fail when it does).  Keeping the list in one place is the point:
-# a second hard-coded copy in the workflow already caused a red run, when the
-# HTTP/JSON guide was added to dist/ and the workflow list did not know about it.
+# a second hard-coded copy in the workflow already caused a red run, when a doc
+# was added to dist/ and the workflow list did not know about it.
 #
 # Rules:
 #   - one entry per line, file name only (artifacts are flat)
@@ -14,9 +14,10 @@
 # is loadable at runtime may appear here: no DLL, no CA bundle, no sidecar
 # config.  cmd tests passing with only the exe and a script present is the whole
 # promise this file guards.
+#
+# This is the entire product of the repository: one interpreter per
+# architecture, both customisations (/AI and the OutputDebug console mirror)
+# compiled in.  The installer, the generated API reference and the Debug build
+# were removed on purpose -- a payload file that is not an interpreter is a
+# regression against this list, not a to-do item.
 AutoHotkey<arch>.exe
-BUILTIN_API.md
-builtin-api.json
-debugging.md
-v2-gotchas.md
-README-AI.md

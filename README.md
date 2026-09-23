@@ -4,10 +4,20 @@ Customized AutoHotkey v2 builds that **follow upstream**, delivered as a patch
 series instead of a fork. Upstream lives in a git submodule at a pinned commit;
 `patches/` is applied on top at build time.
 
+The product of this repository is exactly two files:
+
+```
+AutoHotkey64.exe    x64 interpreter
+AutoHotkey32.exe    Win32 interpreter
+```
+
+No installer, no DLL, no sidecar config, no extra build flavour -- both
+customizations are compiled into the interpreter itself.
+
 - Upstream: <https://github.com/AutoHotkey/AutoHotkey> (`alpha` branch)
 - Pinned base: **v2.1-alpha.32** (`d8f819c`)
-- CI: GitHub Actions builds x64 Release (and optionally Win32 / Debug) and
-  uploads the binaries as workflow artifacts.
+- CI: GitHub Actions builds x64 and Win32 Release, verifies both customizations
+  against a pristine control, and uploads each interpreter as an artifact.
 
 ## Why patches instead of a fork
 
@@ -39,9 +49,17 @@ AutoHotkey64.exe /NonInteractive script.ahk
 In this mode the interpreter:
 
 - never creates a dialog for any diagnostic (load error, syntax error, runtime
-  error, uncaught exception, warning, critical error, out-of-memory);
+  error, uncaught exception, warning, critical error, out-of-memory), nor for the
+  notes upstream only ever raises as windows: the hotkey throttle ("N hotkeys have
+  been received… Do you want to continue?"), a keyboard/mouse hook that could not
+  be activated, a hotkey missing from the current keyboard layout, `Edit()`
+  failing to launch an editor, and the debugger's failed-connect/fatal prompts;
 - never creates the main window or tray icon, and never installs the
   `WH_MSGFILTER` hook (nothing can block on a message pump);
+- when a dialog upstream uses to *ask* something has no one to answer, takes the
+  branch that keeps the script running and prints the text instead. Exiting here
+  would turn a recoverable warning into an unexplained death, and an unattended
+  caller can always kill the process itself;
 - treats `#SingleInstance Prompt` as *ignore* instead of prompting;
 - writes a stable, parseable line to **stderr**:
 
@@ -52,6 +70,10 @@ In this mode the interpreter:
   with a trailing `File: <path>` / `Line: <n>` block when an exception object
   carries position info;
 - exits non-zero when a thread died from an unhandled error.
+
+Windows a script asks for on purpose — `MsgBox()`, `InputBox()`, `Gui` — are
+**not** touched: `/AI` suppresses the interpreter's own diagnostics, not the
+script's UI.
 
 Because `AutoHotkey.exe` is a Windows **GUI-subsystem** binary it does not
 externally own a console. In `/AI` mode it therefore calls
@@ -69,73 +91,81 @@ the behaviour falls back to redirect-only, so piping and `2>` still work.
 
 Normal interactive behaviour is unchanged unless the switch is passed.
 
-### 2. Built-in API reference (generated from source)
+### 2. `OutputDebug()` reaches the debugger **and** the command line
 
-Upstream registers its built-in functions in **two disjoint tables**, and neither
-is queryable from a running interpreter:
+Upstream's `OutputDebug(Text)` is either/or: with a script-debugger client
+connected the text goes to the debugger and `OutputDebugString()` is skipped, so
+the only ways to read it are a debugger or DebugView. A caller sitting in a
+terminal has neither and sees nothing at all.
 
-| Registry | Source | Entries | Carries |
-| --- | --- | --- | --- |
-| `md_func[]` | `source/lib/functions.h` | 253 | parameter directions, types, **names**, return type |
-| `g_BIF[]` | `source/script.cpp` | 101 | arity, variadic flag, output vars — **no parameter names** |
+This build keeps both existing destinations and adds a third: the text is also
+mirrored to **stderr**, terminated on its own line.
 
-The sets do not overlap; together they are **354 functions**. Both are read
-directly out of the source tree -- there is no runtime switch to dump them and
-there is nothing to guess:
-
-```powershell
-pwsh -NoProfile -File tools/extract-api-docs.ps1 `
-     -Summary dist/BUILTIN_API.md -Json -OutFile dist/builtin-api.json `
-     -Verify -Exe dist/AutoHotkey64.exe
+```ahk
+OutputDebug("about to touch the registry")   ; debugger + DebugView + stderr
 ```
 
-`tools/build.ps1` runs it automatically and emits `BUILTIN_API.md` and
-`builtin-api.json` next to the executable, so a downloaded artifact is
-self-describing.
+- stdout stays reserved for what the script itself prints
+  (`FileAppend(..., "*")`), so the two streams never mix and a caller can read
+  them separately;
+- the mirror belongs to the *function*, not to `/AI` — forgetting the switch
+  still leaves debug output visible;
+- `AutoHotkey.exe` is a GUI-subsystem binary, so outside `/AI` the first
+  `OutputDebug()` call attaches to the parent console. That attach fails
+  harmlessly when there is none (a double-clicked script), and redirected or
+  piped stderr is written as UTF-8;
+- this is the **only** change that is live without a switch, so it is audited as
+  a deliberate divergence rather than claimed as parity: `tools/test-parity.ps1`
+  runs the same script against a pristine binary and requires the difference to
+  be exactly the debug lines — same exit code, same stdout.
+  `tools/test-outputdebug.ps1` covers the rest, including the negative control
+  (a stock build must stay silent) and the non-ASCII path.
 
-**On the 101 `g_BIF[]` entries.** That table stores a name and an arity only,
-and the implementations take positional arguments (`BIF_DECL(BIF_InStr)`
-reads `aParam[0]`), so **the source tree declares no parameter names for
-them** -- upstream is migrating these to the `md_func` form and the unmigrated
-ones have no names anywhere in the tree. Those entries therefore publish their
-real arity and are marked `[arity only]`. No `arg1, arg2, ...` placeholders are
-invented: once written into a document a placeholder is indistinguishable from
-a real parameter name.
-
-Every generated signature records which table it came from, so the provenance of
-each line is auditable. `-Verify` additionally cross-checks the parsed arity
-against every function in a running interpreter and **fails** on any
-disagreement (min/max params, variadic flag).
-
+Both customizations exist for one purpose: an AI (or any unattended caller) can
+run and debug AHK scripts over a command line without ever risking a modal
+dialog it cannot dismiss.
 
 ```
 .
 ├── upstream/               git submodule -> AutoHotkey/AutoHotkey (pinned)
 ├── patches/                patch series, applied in filename order
 │   ├── 0002-AutoHotkey.cpp.patch        parses /AI and /NonInteractive
-│   ├── 0004-error.cpp.patch
-│   ├── 0007-script.cpp.patch
-│   └── 0008-script.h.patch
+│   ├── 0004-error.cpp.patch             diagnostics to stderr, never a dialog
+│   ├── 0007-script.cpp.patch            /AI propagation (no window, no tray)
+│   ├── 0008-script.h.patch              declarations
+│   ├── 0009-script2.cpp.patch           OutputDebug() mirrors to the console
+│   ├── 0010-Debugger.cpp.patch          DBGp connect/fatal prompts go to stderr
+│   ├── 0011-hook.cpp.patch              hook-activation failure goes to stderr
+│   └── 0012-hotkey.cpp.patch            hotkey throttle goes to stderr
 ├── tools/
-│   ├── AhkAi.psm1          run the interpreter with a timeout + real stderr;
+│   ├── AhkAi.psm1          run the interpreter with a timeout + real stderr,
+│   │                       or on a console it owns, or on a private desktop
+│   │                       where a dialog can be seen but not touched;
 │   │                       Test-AhkPatchedBuild (static patch-marker scan)
-│   ├── ConsoleProbe.cs     launch under a real console so output can be read back
+│   ├── ConsoleProbe.cs     console-owning launcher: argv in, screen buffer back
+│   ├── DesktopProbe.cs     private-desktop launcher: argv in, window list back,
+│   │                       child claimed by a kill-on-close job object
 │   ├── apply-patches.ps1   clone/update upstream + apply the series
-│   ├── build.ps1           configure + build with MSBuild (+ docs, + console check)
+│   ├── build.ps1           MSBuild + copy the exe to dist/ + post-build checks
 │   ├── download.ps1        fetch a CI artifact (and optionally smoke-test it)
 │   ├── export-patches.ps1  re-export the series from a working tree
-│   ├── extract-api-docs.ps1    API reference built from the upstream source tree
-│   ├── install-patched.ps1 install this build as the system interpreter
+│   ├── pack-release.ps1    assemble/publish the two interpreters from a CI run
 │   ├── test-console-visibility.ps1  /AI output is visible on a bare console
+│   ├── test-dialog-guards.ps1       static: every interpreter dialog call is
+│   │                                gated by mNonInteractive (sites no runtime
+│   │                                test can reach on a given machine)
+│   ├── test-no-dialog.ps1           /AI raises NO window (watched on a private
+│   │                                desktop; a stock build must raise one)
 │   ├── test-noninteractive.ps1      /AI contract (redirected; bytes only)
-│   ├── test-parity.ps1              behaviour matches stock outside the switches
-│   ├── test-installer.ps1           install/uninstall round-trip
-│   └── test-system-interpreter.ps1  the installed interpreter is the patched one
+│   ├── test-outputdebug.ps1         OutputDebug() reaches the console, per arch
+│   └── test-parity.ps1              behaviour matches stock, plus the audited
+│                                    OutputDebug divergence against a control
 ├── docs/
+│   ├── ARTIFACT_CONTENTS.txt  the payload list both build.ps1 and CI enforce
 │   ├── debugging.md            how to run scripts so errors are visible
 │   ├── v2-gotchas.md           v2 traps worth knowing in advance
-│   ├── README-AI.md            artifact contents and the /AI contract
-│   └── api/SIGNATURES.md   generated from source, do not edit
+│   └── README-AI.md            the /AI + OutputDebug contract, for an agent
+├── samples/                one script per trap, runnable under /AI
 ├── UPSTREAM_PIN            the upstream commit the series is based on
 └── .github/workflows/build.yml
 ```
@@ -153,10 +183,10 @@ Warnings do not change the exit code.
 
 ## Download the CI build
 
-The `verify` job runs the smoke test **and** the console-visibility check against
-the freshly built artifact, so a green run proves the `/AI` contract on a clean
-runner -- including that the diagnostics are actually visible, not merely
-present on a redirected pipe.
+The `verify` job runs the `/AI` smoke test, the console-visibility check and the
+`OutputDebug` check against the freshly built artifact, then rebuilds a pristine
+binary from the same pin and compares the two -- so a green run proves both
+customizations work on a clean runner and that nothing else changed.
 
 ```powershell
 # latest successful run -> ./download, then smoke-test it
@@ -169,42 +199,61 @@ pwsh -NoProfile -File tools/download.ps1 `
 # equivalent raw gh commands
 gh run list --workflow=build.yml --limit 5
 gh run download <run-id> -n AutoHotkey64-x64-Release -D ./download
-./download/AutoHotkey64.exe /AI tools/tests/ok.ahk
+./download/AutoHotkey64.exe /AI samples/1-unset-var.ahk   # exit 1, stderr non-empty
+./download/AutoHotkey64.exe samples/2-outputdebug.ahk     # debug text on stderr
 ```
 
-Available artifacts: `AutoHotkey64-x64-Release`, `AutoHotkey32-Win32-Release`,
-`AutoHotkey64-x64-Debug`, and (experimental) `AutoHotkeySC-x64`.
+Available artifacts: `AutoHotkey64-x64-Release` and `AutoHotkey32-Win32-Release`,
+each containing the one interpreter. `tools/pack-release.ps1` pulls both out of a
+green run and ships them as `AutoHotkey64.exe` + `AutoHotkey32.exe` +
+`SHA256SUMS.txt`.
 
 ## Local build
 
 ```powershell
 git submodule update --init --recursive
 pwsh -NoProfile -File tools/apply-patches.ps1
-pwsh -NoProfile -File tools/test-noninteractive.ps1 -Exe dist/AutoHotkey64.exe
-pwsh -NoProfile -File tools/test-console-visibility.ps1 -Exe dist/AutoHotkey64.exe
+pwsh -NoProfile -File tools/build.ps1 -Configuration Release -Platform x64   -OutDir dist
+pwsh -NoProfile -File tools/build.ps1 -Configuration Release -Platform Win32 -OutDir dist
+
+# the whole local suite, on both interpreters
+pwsh -NoProfile -File tools/test-noninteractive.ps1     -Exe dist/AutoHotkey64.exe,dist/AutoHotkey32.exe
+pwsh -NoProfile -File tools/test-console-visibility.ps1 -Exe dist/AutoHotkey64.exe,dist/AutoHotkey32.exe
+pwsh -NoProfile -File tools/test-no-dialog.ps1          -Exe dist/AutoHotkey64.exe,dist/AutoHotkey32.exe
+pwsh -NoProfile -File tools/test-outputdebug.ps1        -Exe dist/AutoHotkey64.exe,dist/AutoHotkey32.exe
+pwsh -NoProfile -File tools/test-dialog-guards.ps1      -PristineSource pristine-test
 ```
+
+Every `-Exe` above takes a comma- or semicolon-separated list and runs each
+architecture in turn; repeating the switch is not valid for an array parameter,
+and `-File` does not split `a,b` into two arguments the way `-Command` does, so
+the tests normalise it themselves.
 
 Requires VS 2022 Build Tools with the "Desktop development with C++" workload;
 `tools/build.ps1` locates it via `vswhere` and sources `vcvarsall.bat` itself.
-Output lands in `upstream/bin/AutoHotkey64.exe`; `-OutDir` also copies it to
-`dist/`, generates the API reference from the source tree, and checks that the
-`/AI` diagnostics are visible on a bare console.
+Output lands in `upstream/bin/AutoHotkey64.exe`; `-OutDir` copies the exe to
+`dist/`, checks the payload against `docs/ARTIFACT_CONTENTS.txt` (the
+interpreter, and nothing else) and verifies that `/AI` diagnostics are visible
+on a bare console.
 
-> Build **both** architectures before claiming success, then repack the installer.
-> CI has a `Release/Win32` job for good reason: a 32/64-bit difference in type
-> aliasing (`UIntPtr` is `UInt32` on Win32 and `UInt64` on x64) once compiled
-> cleanly for x64 and failed only under Win32.
+> Build **both** architectures before claiming success. CI has a `Release/Win32`
+> job for good reason: a 32/64-bit difference in type aliasing (`UIntPtr` is
+> `UInt32` on Win32 and `UInt64` on x64) once compiled cleanly for x64 and failed
+> only under Win32.
 
 ### Proving the result is still stock in every other respect
 
-The goal is "/AI only, as close to upstream as possible", so the interesting
-claim is not that the new switch works but that **nothing else changed**. Build a
-pristine binary from the same pin and compare:
+The goal is "/AI and OutputDebug, as close to upstream as possible", so the
+interesting claim is not that the new behaviour works but that **nothing else
+changed**. Build a pristine binary from the same pin and compare:
 
 ```powershell
-git -C upstream archive --format=zip -o pristine.zip HEAD
+# NOTE the `../`: `-o` resolves against the submodule directory, not the shell's
+# cwd, so `-o pristine.zip` drops the archive inside upstream/.
+git -C upstream archive --format=zip -o ../pristine.zip HEAD
 Expand-Archive pristine.zip pristine-test
-pwsh -NoProfile -File tools/build.ps1 -UpstreamDir pristine-test -OutDir pristine-dist
+pwsh -NoProfile -File tools/build.ps1 -UpstreamDir pristine-test
+Copy-Item pristine-test/bin/AutoHotkey64.exe pristine-dist/AutoHotkey64.exe
 pwsh -NoProfile -File tools/test-parity.ps1 `
      -Patched dist/AutoHotkey64.exe `
      -Pristine pristine-dist/AutoHotkey64.exe `
@@ -227,22 +276,7 @@ control for you.
 >
 > For the same reason the test does **not** prove "stock rejects `/AI`" by
 > running stock with `/AI`: stock treats the unknown switch as the script path and
-> raises "Script file not found". It reads the source instead.Win32 and
-> `UInt64` on x64) compiled cleanly for x64 and failed only under Win32.
-
-### Installing this build as the default interpreter
-
-To make AI debugging work everywhere rather than only when a caller remembers
-to pass `/AI`:
-
-```powershell
-pwsh -NoProfile -File tools/install-patched.ps1            # install
-pwsh -NoProfile -File tools/install-patched.ps1 -Revert    # restore upstream
-```
-
-It backs the original binaries up to `backup-stock/` and **refuses to install a
-candidate that does not demonstrably honour `/AI`**, so a stale build can never
-be promoted by accident.
+> raises "Script file not found". It reads the source instead.
 
 > Note: `upstream/` must not have `core.autocrlf=true`. Upstream ships
 > `* text=auto` and the patch series matches context lines byte-for-byte, so a
@@ -259,9 +293,9 @@ unconditionally yet references members that `script.h` hides behind
 `InitModuleSearchPath`, …), and `script.cpp` assigns to `LPTSTR sSourceFile[1]`.
 22 errors, identical with and without this patch series.
 
-It is therefore kept in the CI matrix but marked `experimental`
-(`continue-on-error`), so a future upstream fix is picked up automatically
-while a failure never blocks the usable artifacts.
+It is therefore not built at all: the CI matrix is x64 Release and Win32
+Release only. Should upstream fix it, adding a matrix entry is a one-line change
+-- until then a target that cannot compile must not appear in the artifact list.
 
 ## Updating to a newer upstream
 

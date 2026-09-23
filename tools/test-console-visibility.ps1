@@ -12,7 +12,7 @@ perfectly (nothing printed, and it did not even exit).
 A plain `cmd /c` or PowerShell pipe cannot test this, because those redirect the
 child's stderr and hand it a pipe -- which makes the diagnostic visible and hides
 the bug.  So the child is launched under a console this script owns, and the
-console buffer is read back afterwards.
+console buffer is read back afterwards (tools/ConsoleProbe.cs via AhkAi.psm1).
 
 Usage:
   pwsh -NoProfile -File tools/test-console-visibility.ps1 -Exe dist\AutoHotkey64.exe
@@ -26,23 +26,24 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+Import-Module (Join-Path $PSScriptRoot 'AhkAi.psm1') -Force
+
+# -Exe a,b, as in the other multi-target suites.
+$subjects = @($Exe -split '[,;]' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+if ($subjects.Count -gt 1) {
+    $rc = 0
+    foreach ($s in $subjects) {
+        & $PSCommandPath -RepoRoot $RepoRoot -Exe $s
+        if ($LASTEXITCODE) { $rc = $LASTEXITCODE }
+    }
+    exit $rc
+}
+$Exe = $subjects[0]
 
 $Exe = (Resolve-Path $Exe).Path
 if (-not (Test-Path $Exe)) { throw "interpreter not found: $Exe" }
 
-# --- build the console-owning launcher -------------------------------------
-$probeSrc = Join-Path $RepoRoot 'tools\ConsoleProbe.cs'
-if (-not (Test-Path $probeSrc)) { throw "missing $probeSrc" }
-$probeExe = Join-Path $env:TEMP ('ahk-console-probe-{0}.exe' -f ([guid]::NewGuid().ToString('N')))
-
-$csc = @(
-    'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
-    'C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe'
-) | Where-Object { Test-Path $_ } | Select-Object -First 1
-if (-not $csc) { throw 'csc.exe not found; cannot build the console probe' }
-
-& $csc /nologo "/out:$probeExe" $probeSrc | Out-Null
-if (-not (Test-Path $probeExe)) { throw 'failed to compile the console probe' }
+$probe = Build-ConsoleProbe -RepoRoot $RepoRoot
 
 # --- the script under test --------------------------------------------------
 # Two lines: the first is loadable, the second is an unassigned-variable error,
@@ -54,16 +55,13 @@ $script = Join-Path $work 'probe case.ahk'   # a space, so quoting is exercised
     "#Requires AutoHotkey v2.0`nxxx`n",
     (New-Object System.Text.UTF8Encoding($false)))
 
-$capture = Join-Path $work 'console.txt'
-
 try {
-    # Do NOT pipe or redirect the probe: piping gives it a redirected stdout,
-    # and a console-owning launcher cannot be observed through a pipe -- that
-    # is exactly the condition that hides the bug under test.  The probe writes
-    # its findings to $capture instead, and its exit code carries the verdict.
-    & $probeExe $Exe $script $capture
-    $exit = $LASTEXITCODE
-    $text = if (Test-Path $capture) { [System.IO.File]::ReadAllText($capture) } else { '' }
+    # Do NOT pipe or redirect anything: that hands the child a pipe, which makes
+    # the diagnostic visible and hides the bug.  The probe writes the console
+    # contents to a file instead, so the verdict does not depend on stdout.
+    $r = Invoke-AhkInConsole -Probe $probe -Exe $Exe -Arguments @('/AI', $script)
+    $exit = $r.ExitCode
+    $text = $r.Console
     $trimmed = $text.Trim()
 
     Write-Output "interpreter : $Exe"
@@ -77,6 +75,10 @@ try {
     }
 
     $ok = $true
+    if ($r.Blocked) {
+        Write-Output '::error::the interpreter never exited -- a modal dialog is up, so /AI did not suppress it'
+        $ok = $false
+    }
     if ($trimmed.Length -eq 0) {
         Write-Output '::error::/AI printed NOTHING to a bare console; AttachConsole probably regressed'
         $ok = $false
@@ -98,6 +100,6 @@ try {
     exit ($ok ? 0 : 1)
 }
 finally {
-    Remove-Item $probeExe -Force -ErrorAction SilentlyContinue
+    Remove-Item $probe -Force -ErrorAction SilentlyContinue
     Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
 }

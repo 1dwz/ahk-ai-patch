@@ -1,0 +1,38 @@
+diff --git a/source/hotkey.cpp b/source/hotkey.cpp
+index f74e16f5..39f93086 100644
+--- a/source/hotkey.cpp
++++ b/source/hotkey.cpp
+@@ -912,14 +912,25 @@ void Hotkey::PerformInNewThreadMadeByCaller(HotkeyVariant &aVariant)
+ 		// any pending hotkey keystrokes that haven't yet been fired:
+ 		ResetRunAgainAfterFinished();
+ 
+-		// This is now needed since hotkeys can still fire while a messagebox is displayed.
+-		// Seems safest to do this even if it isn't always necessary:
+-		sDialogIsDisplayed = true;
+-		g_AllowInterruption = FALSE;
+-		if (MsgBox(error_text, MB_YESNO) == IDNO)
+-			g_script.ExitApp(EXIT_CLOSE); // Might not actually Exit if there's an OnExit function.
+-		g_AllowInterruption = TRUE;
+-		sDialogIsDisplayed = false;
++		// ahk-ai patch: /AI may not raise a window, and there is nobody to answer
++		// "Do you want to continue?".  Report on stderr and take the "yes" branch:
++		// the caller can still kill the process, while exiting here would turn a
++		// recoverable warning into the silent death of a long-running script.
++		if (g_script.mNonInteractive)
++		{
++			g_script.PrintNote(error_text);
++		}
++		else
++		{
++			// This is now needed since hotkeys can still fire while a messagebox is displayed.
++			// Seems safest to do this even if it isn't always necessary:
++			sDialogIsDisplayed = true;
++			g_AllowInterruption = FALSE;
++			if (MsgBox(error_text, MB_YESNO) == IDNO)
++				g_script.ExitApp(EXIT_CLOSE); // Might not actually Exit if there's an OnExit function.
++			g_AllowInterruption = TRUE;
++			sDialogIsDisplayed = false;
++		}
+ 	}
+ 	// The display_warning var is needed due to the fact that there's an OR in this condition:
+ 	if (display_warning || time_until_now > g_HotkeyThrottleInterval)

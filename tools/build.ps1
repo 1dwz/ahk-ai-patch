@@ -113,48 +113,13 @@ if (Test-Path $built) {
         Copy-Item $built (Join-Path $OutDir $exeName) -Force
         Write-Output ("Copied to: {0}" -f (Join-Path $OutDir $exeName))
 
-        # Generate the built-in API reference next to the binary, straight out
-        # of the build we just produced.  Doing it here means the docs can
-        # never describe a different build than the one shipped, and it works
-        # for a consumer who only downloads the artifact.
-        #
-        # Copy the reference documentation FIRST so everything named in
-        # docs/ARTIFACT_CONTENTS.txt exists before it is checked.
-        foreach ($guide in 'debugging.md', 'v2-gotchas.md', 'README-AI.md') {
-            $src = Join-Path $RepoRoot "docs\$guide"
-            if (Test-Path $src) {
-                Copy-Item $src (Join-Path $OutDir $guide) -Force
-                Write-Output "Docs    : $guide"
-            } else {
-                Write-Warning "hand-written guide missing: $src"
-            }
-        }
-
-        # The API reference is derived from the SOURCE tree, not from the binary:
-        # source/lib/functions.h declares 253 built-ins with full parameter
-        # names, and the g_BIF[] table in source/script.cpp supplies the other
-        # 101 (name + arity only -- see the generator header for why).  Deriving
-        # it here rather than from the exe means -OutDir works for either
-        # architecture and for a stock build too.
-        $gen = Join-Path $RepoRoot 'tools\extract-api-docs.ps1'
-        if (Test-Path $gen) {
-            try {
-                & $gen -RepoRoot $RepoRoot -UpstreamDir $UpstreamDir `
-                       -Summary (Join-Path $OutDir 'BUILTIN_API.md') `
-                       -Json -OutFile (Join-Path $OutDir 'builtin-api.json')
-                if ($LASTEXITCODE -ne 0) { throw "generator exited $LASTEXITCODE" }
-                Write-Output "Docs    : BUILTIN_API.md + builtin-api.json (from source)"
-            } catch {
-                # Documentation must never fail a build; the binary is the
-                # deliverable and this is a derived artifact.
-                Write-Warning "could not generate the API reference: $($_.Exception.Message)"
-            }
-        }
-
         # Warn if the output does not match docs/ARTIFACT_CONTENTS.txt, which is
         # the same list the CI verify job enforces.  Warning rather than failing:
-        # a local -OutDir may legitimately hold both architectures, which the
-        # single-arch CI artifact never does.
+        # a local -OutDir holds both architectures, which the single-arch CI
+        # artifact never does.
+        #
+        # The payload is the interpreter and nothing else -- no docs, no
+        # installer, no sidecar.  Everything the patch set adds is compiled in.
         $manifest = Join-Path $RepoRoot 'docs\ARTIFACT_CONTENTS.txt'
         if (Test-Path $manifest) {
             $archName = if ($Platform -eq 'Win32') { '32' } else { '64' }
@@ -169,7 +134,7 @@ if (Test-Path $built) {
                 Write-Warning "artifact missing from $OutDir : $($absent -join ', ')"
             }
             # Both architectures in one local out dir is the normal case; only
-            # flag files that are not part of either arch's payload.
+            # flag files that are not an interpreter at all.
             $benign = @($unexpected | Where-Object { $_ -match '^AutoHotkey(32|64)\.exe$' })
             $reallyUnexpected = @($unexpected | Where-Object { $benign -notcontains $_ })
             if ($reallyUnexpected.Count) {
@@ -208,30 +173,6 @@ if (Test-Path $built) {
             } finally {
                 Remove-Item $visLog -Force -ErrorAction SilentlyContinue
             }
-        }
-
-        # The installer needs BOTH architectures in one directory, so it is only
-        # packed when the caller has a directory holding both.  A single-arch CI
-        # build skips this; the dedicated release job runs it instead.
-        $haveBoth = (Test-Path (Join-Path $OutDir 'AutoHotkey64.exe')) -and
-                    (Test-Path (Join-Path $OutDir 'AutoHotkey32.exe'))
-        if ($haveBoth) {
-            $pack = Join-Path $RepoRoot 'tools\pack-installer.ps1'
-            if (Test-Path $pack) {
-                try {
-                    $setup = Join-Path $OutDir 'AHK-v2-Setup.exe'
-                    & $pack -Dist $OutDir -OutFile $setup
-                    if ($LASTEXITCODE -eq 0 -and (Test-Path $setup)) {
-                        Write-Output ("Installer: AHK-v2-Setup.exe ({0:N0} bytes)" -f (Get-Item $setup).Length)
-                    } else {
-                        Write-Warning "installer packing failed ($LASTEXITCODE)"
-                    }
-                } catch {
-                    Write-Warning "installer packing could not run: $($_.Exception.Message)"
-                }
-            }
-        } else {
-            Write-Output 'Installer: skipped (needs both architectures in one output directory)'
         }
     }
 } else {

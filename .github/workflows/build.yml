@@ -52,15 +52,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { config: Release,        platform: x64,   artifact: AutoHotkey64-x64-Release,       experimental: false }
-          - { config: Release,        platform: Win32, artifact: AutoHotkey32-Win32-Release,     experimental: false }
-          - { config: Debug,          platform: x64,   artifact: AutoHotkey64-x64-Debug,         experimental: false }
-          # Self-contained (AutoHotkeySC.bin) does NOT compile at the pinned upstream commit:
-          # source/script_module.cpp is compiled unconditionally but references members that
-          # script.h hides behind #ifndef AUTOHOTKEYSC. Verified against pristine upstream
-          # d8f819c, so this is a pre-existing upstream breakage, not caused by our patches.
-          # Kept in the matrix as non-blocking so a future upstream fix is picked up.
-          - { config: Self-contained, platform: x64,   artifact: AutoHotkeySC-x64,               experimental: true  }
+          # The repository produces exactly these two binaries; one per
+          # supported word size.  Debug and Self-contained (AutoHotkeySC.bin)
+          # targets were dropped -- the latter does not even compile at the
+          # pinned upstream, whose script_module.cpp references members that
+          # script.h hides behind #ifndef AUTOHOTKEYSC.
+          - { config: Release, platform: x64,   artifact: AutoHotkey64-x64-Release }
+          - { config: Release, platform: Win32, artifact: AutoHotkey32-Win32-Release }
 
     steps:
       - uses: actions/checkout@v4
@@ -71,7 +69,7 @@ jobs:
         if: env.UPSTREAM_REF != ''
         shell: pwsh
         run: |
-          git -C upstream fetch --depth 1 origin $env.UPSTREAM_REF
+          git -C upstream fetch --depth 1 origin $env:UPSTREAM_REF
           git -C upstream checkout FETCH_HEAD
 
       - name: Apply patch series
@@ -87,7 +85,6 @@ jobs:
 
       - name: Build
         id: build
-        continue-on-error: ${{ matrix.experimental }}
         shell: pwsh
         run: |
           pwsh -NoProfile -File tools/build.ps1 `
@@ -103,14 +100,6 @@ jobs:
           path: dist/*
           if-no-files-found: error
           retention-days: 30
-
-      - name: Flag experimental failure
-        if: matrix.experimental && steps.build.outcome != 'success'
-        shell: pwsh
-        run: |
-          Write-Output "::warning::${{ matrix.artifact }} is an experimental target and failed to build."
-          Write-Output "See the matrix comment in build.yml for the known upstream cause."
-          exit 0
 
   # Only on Release/x64: verify the /AI contract from the freshly built exe.
   verify:
@@ -135,15 +124,15 @@ jobs:
         run: Get-ChildItem -Recurse dist | Select-Object FullName, Length
 
       # The whole point of the build: one executable and nothing it has to load
-      # beside it.  The generated API docs ship with the binary so a downloader
-      # can read the function list -- but a DLL of any name, or anything else,
-      # means self-containment is broken.
+      # beside it -- and, since the patch set adds no runtime dependency, nothing
+      # else at all.  A docs file, an installer or a DLL in this directory means
+      # the artifact drifted from "just the interpreter".
       #
       # The expected payload is listed once, in docs/ARTIFACT_CONTENTS.txt, and
       # read by both this check and tools/build.ps1.  Keeping a second copy here
       # already caused a red run once, when a new doc was added to dist/ and
       # this list did not know about it.
-      - name: Assert the artifact holds no loadable dependency
+      - name: Assert the artifact is the interpreter and nothing else
         shell: pwsh
         run: |
           $manifest = 'docs/ARTIFACT_CONTENTS.txt'
@@ -195,62 +184,11 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File tools/test-console-visibility.ps1 -Exe dist/AutoHotkey64.exe
 
-      # The API reference is generated from the SOURCE tree, so this asserts the
-      # generator still finds everything it is supposed to: 253 built-ins declared
-      # in source/lib/functions.h plus the 101 registered in g_BIF[], totalling
-      # the well-known 354.  It also proves every emitted signature is source-
-      # derived (no invented parameter names) by re-deriving the name set straight
-      # from the source and diffing.
-      - name: Assert the API reference covers the full built-in set
-        shell: pwsh
-        run: |
-          $expected = 354
-          pwsh -NoProfile -File tools/extract-api-docs.ps1 `
-               -Json -OutFile dist/builtin-api.json `
-               -Summary dist/BUILTIN_API.md -OutDir dist/api
-          if ($LASTEXITCODE -ne 0) { throw "generator exited $LASTEXITCODE" }
-
-          $api = Get-Content dist/builtin-api.json -Raw | ConvertFrom-Json
-          Write-Output "functions: $($api.count) ($($api.parameter_names_declared) with declared parameter names, $($api.parameter_names_absent) arity-only)"
-          if ($api.count -ne $expected) {
-            Write-Output "::error::expected $expected built-in functions, got $($api.count)"
-            exit 1
-          }
-
-          # Re-derive the name set from the source, independently of the generator.
-          $fh = Get-Content upstream/source/lib/functions.h -Raw
-          $md = [regex]::Matches($fh, '(?m)^md_func(?:_[a-z]+)?\(\s*([A-Za-z_][A-Za-z0-9_]*)') |
-                ForEach-Object { $_.Groups[1].Value }
-          $sc = Get-Content upstream/source/script.cpp -Raw
-          $bif = [regex]::Matches($sc, '(?m)^\s*BIF[ni1]?\(\s*([A-Za-z_][A-Za-z0-9_]*)') |
-                 ForEach-Object { $_.Groups[1].Value }
-          $fromSource = @($md + $bif | Sort-Object -Unique)
-          $emitted = @($api.functions | ForEach-Object { $_.name } | Sort-Object -Unique)
-          $diff = @(Compare-Object $fromSource $emitted)
-          if ($diff.Count) {
-            Write-Output "::error::generated set differs from the source by $($diff.Count) name(s)"
-            $diff | Select-Object -First 20 | ForEach-Object { Write-Output "  $($_.SideIndicator) $($_.InputObject)" }
-            exit 1
-          }
-          Write-Output "OK: $expected functions, name set identical to the source"
-
-          # No entry may carry an invented name: a function whose parameter names
-          # are not in the source must report zero parameter names.
-          $invented = @($api.functions | Where-Object { -not $_.parameter_names_declared -and $_.params.Count -gt 0 })
-          if ($invented.Count) {
-            Write-Output "::error::$($invented.Count) arity-only entry(ies) carry invented parameters"
-            exit 1
-          }
-          $placeholders = @($api.functions | ForEach-Object { $_.params } | Where-Object { $_.name -match '^arg\d+$' })
-          if ($placeholders.Count) {
-            Write-Output "::error::$($placeholders.Count) placeholder parameter name(s) present"
-            exit 1
-          }
-          Write-Output "OK: every parameter name is source-declared; none invented"
-      # The goal is "/AI only, as close to upstream as possible", so the strongest
-      # available claim is that an ORDINARY invocation is byte-identical to
-      # stock.  That needs a pristine binary from the same pinned commit, built
-      # here and compared against the artifact under test.
+      # The strongest available claim about this patch set is that an ORDINARY
+      # invocation is byte-identical to stock.  That needs a pristine binary from
+      # the same pinned commit, built here and compared against the artifact
+      # under test -- and it is also the control for the two divergence checks
+      # that follow (OutputDebug, behaviour parity).
       - name: Build the pristine control from the same pin
         shell: pwsh
         run: |
@@ -289,6 +227,16 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File tools/apply-patches.ps1
 
+      # Several interpreter diagnostics need machine state a runner does not have
+      # (a keyboard layout missing a key, a game holding the hook, a debugger
+      # client refusing).  test-no-dialog.ps1 cannot reach them, so their gates are
+      # asserted against the source text instead -- and against pristine-test below
+      # it, which is what proves the assertion is not vacuous.
+      - name: Assert every interpreter dialog is gated by /AI
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File tools/test-dialog-guards.ps1 -PristineSource pristine-test
+
       - name: Assert behaviour is unchanged outside the new switches
         shell: pwsh
         run: |
@@ -297,87 +245,50 @@ jobs:
             -Pristine pristine-dist/AutoHotkey64.exe `
             -PristineSource pristine-test
 
-  # The installer needs both architectures in one directory and writes to
-  # Program Files and HKLM, so it gets its own job that runs elevated (the
-  # windows-latest runner is already an administrator).  It is separated from
-  # `verify` so an installer regression cannot mask a binary regression, and so
-  # a failed install cannot leave the verify runner in a modified state.
-  installer:
-    needs: build
-    runs-on: windows-latest
-    steps:
-      - name: Check out
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
+      # The second customisation: OutputDebug() must reach the command line as
+      # well as the debugger.  Run with the pristine control, because a stock
+      # interpreter prints nothing on stderr for that script either -- a patched
+      # build that mirrored nothing would otherwise look identical to one that
+      # works.  The control asserts the marker is ABSENT from stock output.
+      - name: Assert OutputDebug reaches the console
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File tools/test-outputdebug.ps1 `
+            -Exe dist/AutoHotkey64.exe `
+            -Pristine pristine-dist/AutoHotkey64.exe
 
-      - name: Download x64 Release artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: AutoHotkey64-x64-Release
-          path: dist/x64
-
+      # Everything above ran against x64 only, yet the repository ships two
+      # interpreters.  A 32/64 type-aliasing difference once compiled cleanly for
+      # x64 and failed only under Win32, so the second binary gets the same three
+      # contracts.  The pristine control stays the x64 one: what it has to prove
+      # is that a stock build prints nothing for OutputDebug(), which is
+      # arch-independent source behaviour -- and test-outputdebug.ps1 scans the
+      # Win32 binary's own patch marker before trusting it as the subject.
       - name: Download Win32 Release artifact
         uses: actions/download-artifact@v4
         with:
           name: AutoHotkey32-Win32-Release
-          path: dist/win32
+          path: dist32
 
-      - name: Assemble both architectures for the installer
+      - name: Assert the 32-bit interpreter honours both contracts
         shell: pwsh
         run: |
-          # The installer payload needs both interpreters plus the docs in ONE
-          # flat directory.  The two artifacts are downloaded separately, so
-          # flatten them here rather than teaching pack-installer.ps1 about a
-          # per-architecture layout it does not otherwise need.
-          New-Item -ItemType Directory -Path dist/flat -Force | Out-Null
-          Copy-Item dist/x64/*   dist/flat -Force -Recurse
-          Copy-Item dist/win32/* dist/flat -Force -Recurse
+          pwsh -NoProfile -File tools/test-noninteractive.ps1 -Exe dist32/AutoHotkey32.exe
+          pwsh -NoProfile -File tools/test-console-visibility.ps1 -Exe dist32/AutoHotkey32.exe
+          pwsh -NoProfile -File tools/test-outputdebug.ps1 `
+            -Exe dist32/AutoHotkey32.exe `
+            -Pristine pristine-dist/AutoHotkey64.exe
 
-          $need = 'AutoHotkey64.exe', 'AutoHotkey32.exe'
-          foreach ($n in $need) {
-            if (-not (Test-Path "dist/flat/$n")) {
-              Write-Output "::error::dist/flat/$n is missing; the installer needs both architectures"
-              Get-ChildItem dist -Recurse | Select-Object FullName
-              exit 1
-            }
-          }
-          Get-ChildItem dist/flat | Select-Object Name, Length
-
-      - name: Pack the installer
-        shell: pwsh
-        run: pwsh -NoProfile -File tools/pack-installer.ps1 -Dist dist/flat -OutFile dist/AHK-v2-Setup.exe
-
-      # install -> assert PATH, association, patch marker, byte-exact extraction ->
-      # uninstall -> assert full rollback.  This is the only thing that proves
-      # the installer works rather than merely builds.
-      - name: End-to-end install and rollback
-        shell: pwsh
-        run: pwsh -NoProfile -File tools/test-installer.ps1 -Setup dist/AHK-v2-Setup.exe
-
-      # Registry correctness is not the same as the association working, so this
-      # launches a real .ahk through ShellExecute and waits for evidence.
-      - name: Association actually launches a script
-        shell: pwsh
-        run: pwsh -NoProfile -File tools/test-association.ps1 -Setup dist/AHK-v2-Setup.exe
-
-      - name: Leave the machine clean
-        if: always()
+      # The other half of the /AI contract, and the half no earlier step covered:
+      # test-noninteractive.ps1 reads stderr, which cannot see a window.  An error
+      # that prints AND blocks on a dialog looks healthy to a byte-level assertion
+      # and is fatal to an unattended run, so this step watches for windows on a
+      # private desktop -- where a leak is recorded instead of landing on a screen.
+      # Passing -Pristine makes the watcher prove it can see a dialog at all, on a
+      # build that has no /AI.
+      - name: Assert /AI raises no window on either interpreter
         shell: pwsh
         run: |
-          # test-association.ps1 removes its own install in a finally block, but
-          # a hard failure earlier can skip that; make the job idempotent.
-          if (Test-Path 'C:\Program Files\AHK-v2\uninstall.exe') {
-            & 'C:\Program Files\AHK-v2\uninstall.exe' /quiet
-            Start-Sleep -Seconds 5
-          }
-          if (Test-Path 'C:\Program Files\AHK-v2') {
-            Remove-Item 'C:\Program Files\AHK-v2' -Recurse -Force -ErrorAction SilentlyContinue
-          }
-
-      - name: Upload the installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: AHK-v2-Setup
-          path: dist/AHK-v2-Setup.exe
-          if-no-files-found: error
+          pwsh -NoProfile -File tools/test-no-dialog.ps1 `
+            -Exe dist/AutoHotkey64.exe,dist32/AutoHotkey32.exe `
+            -Pristine pristine-dist/AutoHotkey64.exe

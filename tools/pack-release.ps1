@@ -7,20 +7,17 @@ can be stale, and "the artifact came out of a green run" is the only claim
 worth shipping.  This script therefore downloads the artifacts of one run,
 lays them out, hashes them, and zips the result.
 
-Layout produced (matches every previous release):
+Layout produced -- the entire product of this repository:
 
-  <out>/x64-Release/       AutoHotkey64.exe + the generated/hand-written docs
-  <out>/Win32-Release/     AutoHotkey32.exe + the same docs
-  <out>/x64-Debug/         AutoHotkey64.exe (Debug) + the same docs
-  <out>/AHK-v2-Setup.exe   the self-extracting installer
-  <out>/README.md          the repo README at the released commit
-  <out>/README-AI.md       the agent-facing guide
-  <out>/SHA256SUMS.txt     every payload file, so a download can be verified
+  <out>/AutoHotkey64.exe   x64 interpreter, /AI + OutputDebug console mirror
+  <out>/AutoHotkey32.exe   Win32 interpreter, same
+  <out>/SHA256SUMS.txt     the two hashes, so a download can be verified
 
-The experimental AutoHotkeySC-x64 artifact is intentionally NOT shipped: it
-does not compile at the pinned upstream commit (a pre-existing upstream
-breakage, see the matrix comment in build.yml), and shipping a target that is
-known to fail would misrepresent the release.
+SHA256SUMS.txt is the only non-executable file shipped, and it is not part of
+the product: it exists so a caller can prove the two bytes it downloaded are
+the two bytes CI produced.  Docs, an installer and a Debug build used to be
+laid out here too; they were removed on purpose, and reappearing is a
+regression this script should surface rather than accommodate.
 
 Usage:
   # assemble from a specific run (recommended: the run for the release tag)
@@ -31,7 +28,7 @@ Usage:
 
   # assemble and publish a GitHub release
   pwsh -NoProfile -File tools/pack-release.ps1 -RunId <id> -Publish `
-       -Tag v2-ai-20260919-cb73253 -Title "AutoHotkey v2 + /AI" -NotesFile notes.md
+       -Tag v2-ai-20260923-abcdef1 -Title "AutoHotkey v2 + /AI" -NotesFile notes.md
 #>
 [CmdletBinding()]
 param(
@@ -54,12 +51,11 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# Artifact name -> directory it is laid out under.  The Self-contained target is
-# deliberately absent; see the header.
+# CI artifact name -> the single file it must contain.  Flat: no per-arch
+# subdirectories, because there is nothing beside the interpreter any more.
 $layout = [ordered]@{
-    'AutoHotkey64-x64-Release'   = 'x64-Release'
-    'AutoHotkey32-Win32-Release' = 'Win32-Release'
-    'AutoHotkey64-x64-Debug'     = 'x64-Debug'
+    'AutoHotkey64-x64-Release'   = 'AutoHotkey64.exe'
+    'AutoHotkey32-Win32-Release' = 'AutoHotkey32.exe'
 }
 
 function Invoke-Gh {
@@ -111,72 +107,41 @@ try {
         Write-Output "Downloading $artifact..."
         $null = Invoke-Gh @('run','download',$RunId,'-R',$Repo,'-n',$artifact,'-D',$dest)
 
-        # gh puts the artifact's files under $dest; flatten into the layout dir.
-        $target = Join-Path $stage $layout[$artifact]
-        New-Item -ItemType Directory -Force -Path $target | Out-Null
-        Get-ChildItem $dest -Recurse -File | ForEach-Object {
-            Copy-Item $_.FullName (Join-Path $target $_.Name) -Force
+        $want = $layout[$artifact]
+        $found = @(Get-ChildItem $dest -Recurse -File)
+        if ($found.Count -ne 1 -or $found[0].Name -ne $want) {
+            # A green run whose artifact is empty, or carries something besides
+            # the interpreter, is exactly what this catches.
+            throw "$artifact should be exactly $want, found: $($found.Name -join ', ')"
         }
-        $n = (Get-ChildItem $target -File).Count
-        Write-Output "  -> $($layout[$artifact])/ ($n file(s))"
-    }
-
-    # The installer artifact.
-    Write-Output 'Downloading AHK-v2-Setup...'
-    $null = Invoke-Gh @('run','download',$RunId,'-R',$Repo,'-n','AHK-v2-Setup','-D',(Join-Path $tmp 'setup'))
-    $setup = Get-ChildItem (Join-Path $tmp 'setup') -Recurse -File -Filter '*.exe' | Select-Object -First 1
-    if (-not $setup) { throw 'the AHK-v2-Setup artifact contained no .exe' }
-    Copy-Item $setup.FullName (Join-Path $stage 'AHK-v2-Setup.exe') -Force
-
-    # Top-level guides, taken from the released commit (not from the working
-    # tree, which may have moved on since the tag).  The `?ref=` must stay
-    # attached to the path, so build the whole URL as one string.
-    foreach ($doc in 'README.md', 'docs/README-AI.md') {
-        $name = Split-Path $doc -Leaf
-        $url = "repos/$Repo/contents/$($doc)?ref=$($runInfo.headSha)"
-        $text = (Invoke-Gh @('api', $url, '-H', 'Accept: application/vnd.github.raw')) -join "`n"
-        [System.IO.File]::WriteAllText((Join-Path $stage $name), ($text -replace "`r`n","`n"), (New-Object System.Text.UTF8Encoding($false)))
-        Write-Output "  -> $name (from $($runInfo.headSha.Substring(0,7)))"
+        Copy-Item $found[0].FullName (Join-Path $stage $want) -Force
+        Write-Output ("  -> {0} ({1:N0} bytes)" -f $want, $found[0].Length)
     }
 
     # ------------------------------------------------------------- sanity + hash
 
-    # Every layout dir must carry both an exe and the generated API reference;
-    # a silently-empty artifact directory is the failure this catches.
     $problems = New-Object System.Collections.Generic.List[string]
-    foreach ($dir in $layout.Values) {
-        foreach ($need in 'BUILTIN_API.md', 'builtin-api.json') {
-            if (-not (Test-Path (Join-Path $stage "$dir/$need"))) { $problems.Add("$dir/$need is missing") }
-        }
-    }
-    foreach ($exe in 'x64-Release/AutoHotkey64.exe', 'Win32-Release/AutoHotkey32.exe', 'x64-Debug/AutoHotkey64.exe', 'AHK-v2-Setup.exe') {
+    foreach ($exe in $layout.Values) {
         if (-not (Test-Path (Join-Path $stage $exe))) { $problems.Add("$exe is missing") }
     }
+    $extra = @(Get-ChildItem $stage -Recurse -File |
+               Where-Object { $layout.Values -notcontains $_.Name })
+    foreach ($e in $extra) { $problems.Add("unexpected file in the release: $($e.Name)") }
     if ($problems.Count) {
         $problems | ForEach-Object { Write-Output "::error::$_" }
         throw "$($problems.Count) problem(s) in the assembled release"
     }
 
-    # The reference must be source-derived, i.e. it must NOT carry parameter
-    # placeholders and must say how many entries lack declared names.  This is
-    # the same contract CI asserts, re-checked on the shipped bytes.
-    $apiJson = Get-Content (Join-Path $stage 'x64-Release/builtin-api.json') -Raw | ConvertFrom-Json
-    if ($apiJson.count -ne 354) { throw "x64-Release/builtin-api.json reports $($apiJson.count) functions, expected 354" }
-    if (@($apiJson.functions | ForEach-Object { $_.params } | Where-Object { $_.name -match '^arg\d+$' }).Count -gt 0) {
-        throw 'the shipped API reference contains invented argN placeholders'
-    }
-    Write-Output "  api      : $($apiJson.count) functions ($($apiJson.parameter_names_declared) named, $($apiJson.parameter_names_absent) arity-only)"
-
-    # Every shipped exe must carry the patch marker (static scan -- never run a
+    # Both interpreters must carry the patch marker (static scan -- never run a
     # binary to ask what it supports; a stock one answers with a modal dialog).
     Import-Module (Join-Path $RepoRoot 'tools/AhkAi.psm1') -Force
-    foreach ($exe in 'x64-Release/AutoHotkey64.exe', 'Win32-Release/AutoHotkey32.exe', 'x64-Debug/AutoHotkey64.exe') {
+    foreach ($exe in $layout.Values) {
         $id = Test-AhkPatchedBuild -Path (Join-Path $stage $exe)
         if (-not $id.Patched) { throw "$exe is not the patched build ($($id.Reason))" }
     }
-    Write-Output '  identity : all three interpreters carry the patch marker'
+    Write-Output '  identity : both interpreters carry the patch marker'
 
-    # SHA256SUMS covers every payload file, relative paths, forward slashes so
+    # SHA256SUMS covers both payload files, relative paths, forward slashes so
     # the same file verifies on any OS.
     $files = Get-ChildItem $stage -Recurse -File |
              Where-Object { $_.Name -ne 'SHA256SUMS.txt' } |

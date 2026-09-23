@@ -214,6 +214,38 @@ try {
     }
 
     Write-Output ''
+    Write-Output '### the one divergence that is NOT behind a switch: OutputDebug()'
+    # Everything else this patch set does is gated on /AI.  The OutputDebug()
+    # console mirror is not -- an AI caller that forgets the switch still has to
+    # see its debug output.  That makes it the one change parity cannot claim,
+    # so it is audited here instead: the debug lines must be the ONLY
+    # difference.  Exit code and stdout have to stay identical, or the mirror is
+    # leaking into the script's own output; and the stock control must show that
+    # it printed nothing, or this case would pass on a mirror that was removed.
+    $odbScript = Script 'odb.ahk' "#Requires AutoHotkey v2.0`nFileAppend(`"OUT``n`", `"*`")`nOutputDebug(`"DBG``nSECOND`")`nFileAppend(`"AFTER``n`", `"*`")`n"
+    $paO  = Run-Interpreter $Patched  ($sharedArgs + @($odbScript))
+    $prO  = Run-Interpreter $Pristine ($sharedArgs + @($odbScript))
+    if ($paO.TimedOut -or $prO.TimedOut) {
+        Fail 'OutputDebug mirror' "TIMED OUT (patched=$($paO.TimedOut) pristine=$($prO.TimedOut))"
+    } else {
+        $pOutO = Normalize $paO.Out $work
+        $prOutO = Normalize $prO.Out $work
+        $pErrO = Normalize $paO.Err $work
+        $prErrO = Normalize $prO.Err $work
+        if ($paO.Exit -ne $prO.Exit) {
+            Fail 'OutputDebug mirror' "exit differs: patched=$($paO.Exit) pristine=$($prO.Exit)"
+        } elseif ($pOutO -ne $prOutO) {
+            Fail 'OutputDebug mirror' "stdout differs:`n          patched : $(Show $pOutO)`n          pristine: $(Show $prOutO)"
+        } elseif ($prErrO -ne '') {
+            Fail 'OutputDebug mirror' "the stock control wrote stderr ('$prErrO'); this comparison no longer isolates the mirror"
+        } elseif ($pErrO -ne "DBG`nSECOND") {
+            Fail 'OutputDebug mirror' "patched stderr is '$(Show $pErrO)', expected exactly the two debug lines"
+        } else {
+            Pass "OutputDebug mirror (stdout and exit unchanged, stderr gains only '$(Show $pErrO)')"
+        }
+    }
+
+    Write-Output ''
     Write-Output '### the new switches are additions'
     Write-Output '    Checked against the pristine SOURCE rather than by running stock with'
     Write-Output '    them: an unknown switch makes stock treat the switch as the script path'
@@ -285,5 +317,5 @@ if ($script:fail -gt 0) {
     Write-Output 'DIFFERENCES FOUND: the patch set is not behaviourally equivalent to stock.'
     exit 1
 }
-Write-Output 'OK: no behavioural difference outside the added switches'
+Write-Output 'OK: no behavioural difference outside the added switches and the audited OutputDebug() mirror'
 exit 0

@@ -9,7 +9,7 @@ Usage:
   # specific run / artifact
   pwsh -NoProfile -File tools/download.ps1 -RunId 35368001961 -Artifact AutoHotkey32-Win32-Release
 
-  # download and immediately verify the /AI contract
+  # download and immediately verify both customisations (/AI and OutputDebug)
   pwsh -NoProfile -File tools/download.ps1 -Test
 #>
 [CmdletBinding()]
@@ -59,6 +59,16 @@ if ($Test) {
     } else {
         Write-Output ''
         & (Join-Path $PSScriptRoot 'test-noninteractive.ps1') -Exe $exe.FullName
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        # The other half of /AI: nothing may appear as a window.  It carries its own
+        # positive control (the same error script WITHOUT the switch must produce a
+        # dialog), so it stays meaningful even where no pristine build is at hand.
+        & (Join-Path $PSScriptRoot 'test-no-dialog.ps1') -Exe $exe.FullName
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        # The second customisation, so a downloaded artifact is checked against
+        # everything the build promises.  No pristine control here, so the suite
+        # warns about that rather than claiming more than it proved.
+        & (Join-Path $PSScriptRoot 'test-outputdebug.ps1') -Exe $exe.FullName
         exit $LASTEXITCODE
     }
 }

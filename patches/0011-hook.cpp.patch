@@ -1,0 +1,21 @@
+diff --git a/source/hook.cpp b/source/hook.cpp
+index 9417ac4e..d1f5736a 100644
+--- a/source/hook.cpp
++++ b/source/hook.cpp
+@@ -4048,8 +4048,14 @@ void AddRemoveHooks(HookType aHooksToBeActive, bool aChangeIsTemporary)
+ 		g_AllowInterruption = FALSE; 
+ 		// Below is a generic message to reduce code size.  Failure is rare, but has been known to happen when
+ 		// certain types of games are running).
+-		MsgBox(_T("Warning: The keyboard and/or mouse hook could not be activated; ")
+-			_T("some parts of the script will not function."));
++		// ahk-ai patch: under /AI this is a note on stderr, never a window -- the script
++		// still runs with whatever hooks did activate, exactly as if the user clicked OK.
++		if (g_script.mNonInteractive)
++			g_script.PrintNote(_T("Warning: The keyboard and/or mouse hook could not be activated; ")
++				_T("some parts of the script will not function."));
++		else
++			MsgBox(_T("Warning: The keyboard and/or mouse hook could not be activated; ")
++				_T("some parts of the script will not function."));
+ 		g_AllowInterruption = TRUE;
+ 	}
+ }

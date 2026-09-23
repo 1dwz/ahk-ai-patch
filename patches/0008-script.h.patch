@@ -1,14 +1,8 @@
 diff --git a/source/script.h b/source/script.h
-index b34d5a39..62d18730 100644
+index b34d5a39..022e79fa 100644
 --- a/source/script.h
 +++ b/source/script.h
-@@ -1,4 +1,4 @@
--﻿/*
-+/*
- AutoHotkey
- 
- Copyright 2003-2009 Chris Mallett (support@autohotkey.com)
-@@ -2282,10 +2282,15 @@ public:
+@@ -2282,10 +2282,16 @@ public:
  	bool mAutoExecSectionIsRunning;
  	bool mIsRestart; // The app is restarting rather than starting from scratch.
  	bool mErrorStdOut; // true if load-time syntax errors should be sent to stdout vs. a MsgBox.
@@ -21,6 +15,7 @@ index b34d5a39..62d18730 100644
  	void PrintErrorStdOut(LPCTSTR aErrorText, int aLength = 0, LPCTSTR aFile = _T("*"));
  	void PrintErrorStdOut(LPCTSTR aErrorText, LPCTSTR aExtraInfo, FileIndexType aFileIndex, LineNumberType aLineNumber);
 +	void WriteDiagnosticRaw(LPCTSTR aText, int aLength); // Writes straight to the stderr handle.
++	void PrintNote(LPCTSTR aText); // /AI replacement for a diagnostic that upstream raises as a dialog.
  #ifndef AUTOHOTKEYSC
  	bool mValidateThenExit;
  	LPTSTR mCmdLineInclude;

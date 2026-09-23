@@ -1,0 +1,33 @@
+diff --git a/source/Debugger.cpp b/source/Debugger.cpp
+index 7cbeeb98..f2bbb534 100644
+--- a/source/Debugger.cpp
++++ b/source/Debugger.cpp
+@@ -2497,6 +2497,14 @@ int Debugger::Connect(const char *aAddress, const char *aPort)
+ 				err = connect(s, res->ai_addr, (int)res->ai_addrlen);
+ 				if (err == 0)
+ 					break;
++				// ahk-ai patch: /AI may not raise a window, and "retry" with nobody to
++				// answer would spin forever.  Take the IDIGNORE branch after reporting.
++				if (g_script.mNonInteractive)
++				{
++					g_script.PrintNote(DEBUGGER_ERR_FAILEDTOCONNECT);
++					closesocket(s);
++					return DEBUGGER_E_INTERNAL_ERROR;
++				}
+ 				switch (MessageBox(g_hWnd, DEBUGGER_ERR_FAILEDTOCONNECT, g_script.mFileSpec, MB_ABORTRETRYIGNORE | MB_ICONSTOP | MB_SETFOREGROUND | MB_APPLMODAL))
+ 				{
+ 				case IDABORT:
+@@ -2586,6 +2594,13 @@ int Debugger::FatalError(LPCTSTR aMessage)
+ {
+ 	g_Debugger.Disconnect();
+ 
++	// ahk-ai patch: /AI never raises a window, so there is nobody to answer the
++	// "quit?" prompt; report it and take the branch that keeps running.
++	if (g_script.mNonInteractive)
++	{
++		g_script.PrintNote(aMessage);
++		return DEBUGGER_E_INTERNAL_ERROR;
++	}
+ 	if (IDNO == MessageBox(g_hWnd, aMessage, g_script.mFileSpec, MB_YESNO | MB_ICONSTOP | MB_SETFOREGROUND | MB_APPLMODAL))
+ 	{
+ 		// This might not exit, depending on OnExit:

@@ -156,4 +156,178 @@ function Test-AhkPatchedBuild {
     }
 }
 
-Export-ModuleMember -Function Invoke-AhkAi, Test-AhkPatchedBuild
+<#
+Compile tools/ConsoleProbe.cs, which is how a test observes output that has no
+pipe in front of it.  Returns the path to the probe.
+#>
+function Build-ConsoleProbe {
+    [CmdletBinding()]
+    param(
+        [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
+        [string]$OutFile = (Join-Path ([System.IO.Path]::GetTempPath()) 'ahk-console-probe.exe')
+    )
+
+    $src = Join-Path $RepoRoot 'tools\ConsoleProbe.cs'
+    if (-not (Test-Path -LiteralPath $src)) { throw "missing $src" }
+
+    $csc = @(
+        'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+        'C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe'
+    ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $csc) { throw 'csc.exe not found; cannot build the console probe' }
+
+    # Always recompiled: the probe is small, and a cached copy would silently
+    # test against whatever ConsoleProbe.cs looked like the last time it ran.
+    Remove-Item $OutFile -Force -ErrorAction SilentlyContinue
+    & $csc /nologo "/out:$OutFile" $src | Out-Null
+    if (-not (Test-Path -LiteralPath $OutFile)) { throw 'failed to compile the console probe' }
+    $OutFile
+}
+
+<#
+Run the interpreter with NO redirection of any kind, on a console this function
+owns, and return what ended up on that console.
+
+Invoke-AhkAi cannot answer this question: it always puts a pipe on stderr, and a
+GUI-subsystem binary with a pipe looks healthy while printing nothing to the
+terminal a human is watching.  The probe therefore allocates its own console,
+starts the interpreter as a child with inherited (i.e. real, unredirected)
+handles, and reads the screen buffer back afterwards.
+
+Arguments pass through untouched, so the same path can observe behaviour with and
+without /AI.
+#>
+function Invoke-AhkInConsole {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Exe,
+        [Parameter(Mandatory)][string[]]$Arguments,
+        [Parameter(Mandatory)][string]$Probe,
+        # Same rail as Invoke-AhkAi: with no switch in argv an error raises a
+        # modal dialog, and on a bare console nothing suppresses it.
+        [switch]$AllowDialogRisk
+    )
+
+    $argv = @($Arguments | Where-Object { $_ -ne $null })
+    $safe = $false
+    foreach ($a in $argv) {
+        if ($a -imatch '^/(AI|NonInteractive|ErrorStdOut)($|=)') { $safe = $true; break }
+    }
+    if (-not $safe -and -not $AllowDialogRisk) {
+        throw ("Refusing to run '$Exe $($argv -join ' ')': argv contains none of " +
+               "/AI, /NonInteractive or /ErrorStdOut, so a load error would raise a MODAL " +
+               "DIALOG on the console. Pass -AllowDialogRisk for a script that cannot error.")
+    }
+
+    if (-not (Test-Path -LiteralPath $Probe)) { throw "console probe not found: $Probe" }
+    $capture = Join-Path ([System.IO.Path]::GetTempPath()) ('ahk-console-capture-{0}.txt' -f [guid]::NewGuid().ToString('N'))
+    try {
+        # Never pipe the probe itself: a redirected stdout is exactly the
+        # condition being tested around.
+        & $Probe $Exe $capture @argv
+        $code = $LASTEXITCODE
+        $text = if (Test-Path -LiteralPath $capture) { [System.IO.File]::ReadAllText($capture) } else { '' }
+        [pscustomobject]@{
+            # 259 is what the probe reports for "child still running at the
+            # timeout", i.e. blocked on a dialog.
+            Blocked  = ($code -eq 259)
+            ExitCode = $code
+            Console  = $text
+        }
+    }
+    finally {
+        Remove-Item $capture -Force -ErrorAction SilentlyContinue
+    }
+}
+
+<#
+Compile tools/DesktopProbe.cs, which is how a test sees a modal dialog without
+one ever reaching the user's screen.  Returns the path to the probe.
+#>
+function Build-DesktopProbe {
+    [CmdletBinding()]
+    param(
+        [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
+        [string]$OutFile = (Join-Path ([System.IO.Path]::GetTempPath()) 'ahk-desktop-probe.exe')
+    )
+
+    $src = Join-Path $RepoRoot 'tools\DesktopProbe.cs'
+    if (-not (Test-Path -LiteralPath $src)) { throw "missing $src" }
+
+    $csc = @(
+        'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+        'C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe'
+    ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $csc) { throw 'csc.exe not found; cannot build the desktop probe' }
+
+    # Always recompiled, for the same reason as Build-ConsoleProbe.
+    Remove-Item $OutFile -Force -ErrorAction SilentlyContinue
+    & $csc /nologo "/out:$OutFile" $src | Out-Null
+    if (-not (Test-Path -LiteralPath $OutFile)) { throw 'failed to compile the desktop probe' }
+    $OutFile
+}
+
+<#
+Run the interpreter on a private desktop and report whether it raised a dialog.
+
+Invoke-AhkAi can only infer a dialog from "the child never came back within the
+timeout", which costs the whole timeout and names nothing.  This returns the
+window class, title and control text instead, so a failure says which dialog
+escaped -- and it can assert the POSITIVE case (a dialog must appear) cheaply,
+which is what makes the negative assertions trustworthy.
+
+Because the child is isolated on its own desktop, a dialog here is invisible to
+whoever is sitting at the machine; -AllowDialogRisk is therefore honest for
+scripts that error without a switch.
+#>
+function Invoke-AhkDialogWatch {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Exe,
+        [Parameter(Mandatory)][string[]]$Arguments,
+        [Parameter(Mandatory)][string]$Probe,
+        [switch]$AllowDialogRisk
+    )
+
+    $argv = @($Arguments | Where-Object { $_ -ne $null })
+    $safe = $false
+    foreach ($a in $argv) {
+        if ($a -imatch '^/(AI|NonInteractive|ErrorStdOut)($|=)') { $safe = $true; break }
+    }
+    if (-not $safe -and -not $AllowDialogRisk) {
+        throw ("Refusing to run '$Exe $($argv -join ' ')': argv contains none of " +
+               "/AI, /NonInteractive or /ErrorStdOut, so an error raises a modal dialog. " +
+               "Pass -AllowDialogRisk when that dialog is the point of the case.")
+    }
+
+    if (-not (Test-Path -LiteralPath $Probe)) { throw "desktop probe not found: $Probe" }
+    $capture = Join-Path ([System.IO.Path]::GetTempPath()) ('ahk-dialog-capture-{0}.txt' -f [guid]::NewGuid().ToString('N'))
+    try {
+        & $Probe $capture $Exe @argv
+        $code = $LASTEXITCODE
+        $text = if (Test-Path -LiteralPath $capture) { [System.IO.File]::ReadAllText($capture) } else { '' }
+
+        # The capture's own words are the verdict.  The probe's exit code cannot be
+        # the authority, because the child's exit code travels through it and a
+        # script is free to `ExitApp 3`.
+        $dialog = ($text -match '(?m)^DIALOGS:')
+        $seenMarker = ($dialog -or $text -match '(?m)^NO DIALOG SEEN$')
+        $childExit = $code
+        if ($text -match 'exit=(\d+)') { $childExit = [int]$Matches[1] }
+
+        [pscustomobject]@{
+            Dialog     = $dialog
+            # No marker at all means the watcher never got as far as looking, so a
+            # caller must not read that as "no dialog".
+            Watched    = $seenMarker
+            ExitCode   = $childExit
+            Detail     = $text
+        }
+    }
+    finally {
+        Remove-Item $capture -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Export-ModuleMember -Function Invoke-AhkAi, Test-AhkPatchedBuild, Build-ConsoleProbe, Invoke-AhkInConsole, `
+    Build-DesktopProbe, Invoke-AhkDialogWatch

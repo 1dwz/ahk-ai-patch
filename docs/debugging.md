@@ -20,36 +20,44 @@ to hang.
 - write a stable, parseable line to **stderr**;
 - exit non-zero when a thread died from an unhandled error.
 
+"Any diagnostic" is the claim, and it is wider than the error path. Upstream also
+raises windows for things that are neither errors nor warnings, and a window is
+the one thing an unattended run cannot survive: the hotkey throttle ("N hotkeys
+have been received… Do you want to continue?"), a keyboard/mouse hook that could
+not be activated, a hotkey that does not exist in the current keyboard layout,
+`Edit()` failing to start an editor, and the debugger's connect/fatal prompts.
+Under `/AI` each of those is one line on stderr, and the branch upstream took on
+the user's answer is the one that **keeps the script running** — an unattended
+caller can always kill the process, whereas exiting on a recoverable warning
+destroys the thing being debugged with no explanation.
+
+What is deliberately *not* suppressed: the windows your own script asks for.
+`MsgBox()`, `InputBox()` and `Gui` still open windows, because those are program
+behaviour rather than interpreter diagnostics; suppressing them would change the
+language, not just its error reporting.
+
 Measured on the same broken script: with `/AI` it returns in about 5 ms with a
 precise diagnostic and exit 1; without it, it sat on a dialog until killed.
 
 Interactive behaviour is unchanged unless the switch is passed, so `/AI` is
 safe to add unconditionally in automation.
 
-## The `.ahk` association does NOT pass `/AI`
+## Double-clicking a script is not a diagnostic path
 
-The installed association is:
+This build ships two executables and installs nothing, so the `.ahk` association
+on a machine belongs to whatever interpreter the user registered -- normally one
+without `/AI`, because the flag suppresses the dialogs a human double-clicking a
+script needs to see.
 
-```
-"C:\Program Files\AHK-v2\AutoHotkey64.exe" "%1" %*
-```
-
-There is deliberately no `/AI` in it. That flag suppresses the interpreter's
-dialogs, so baking it into the association would hide load-time and runtime
-errors from the humans who double-click a script — the opposite of helpful.
-
-The consequence for an agent: **the association is not a diagnostic path.**
-If you launch a script by opening the `.ahk` file, a broken script produces a
-modal dialog and no stderr, and the call blocks until the dialog is dismissed.
-
-Always invoke the interpreter yourself so you control the flags:
+The consequence for an agent: **launch the interpreter yourself and pass the
+switch.** Opening the `.ahk` file hands the decision to the registry, and a
+broken script then produces a modal dialog, no stderr, and a call that blocks
+until somebody dismisses it.
 
 ```powershell
 AutoHotkey64.exe /AI script.ahk      # diagnostics on stderr, never a dialog
 $LASTEXITCODE                        # 0 ok, 1 thread error, 2 load failure
 ```
-
-Use the association only when you specifically want to test what a user sees.
 
 ### "Redirected" is not the same as "visible"
 
@@ -63,6 +71,19 @@ This affects `/AI` in particular:
 - `/AI` exports diagnostics to stderr, and the build here calls
   `AttachConsole(ATTACH_PARENT_PROCESS)` so the text does appear in the terminal
   you launched it from.
+- `OutputDebug()` attaches on its own first call, so debug output is visible with
+  or without any switch.
+
+The handle is not a usable signal for that decision. Measured for a GUI-subsystem
+child of a real console: `GetStdHandle(STD_ERROR_HANDLE)` returns a **non-NULL,
+non-`INVALID_HANDLE_VALUE`** handle that `GetFileType` even answers -- and every
+byte written to it vanishes, because the process owns no console. It is
+indistinguishable from a correctly redirected handle (both report
+`FILE_TYPE_DISK`, both fail `GetConsoleMode`), so code that "checks first" either
+skips the attach it needs or performs the one that would break redirection.
+`AttachConsole` is the call that knows the difference: with redirected stderr it
+succeeds and leaves the existing handles alone, and only for the unusable
+inherited handle does it replace them with the console's.
 
 Two consequences worth remembering:
 
@@ -76,6 +97,18 @@ Two consequences worth remembering:
   `tools\test-console-visibility.ps1`; it launches the subject under a console it
   allocates and reads the screen buffer back, and self-checks the read-back with
   a sentinel so "nothing printed" cannot be mistaken for "the reader is broken".
+- **Nor can a stderr capture see a window.** A regression that prints the
+  diagnostic *and* still shows the dialog is green under every byte assertion and
+  fatal to an unattended run, because the process then waits in a nested message
+  loop. `tools\test-no-dialog.ps1` covers that half: `tools\DesktopProbe.cs`
+  starts the interpreter on a private desktop of the current window station, so a
+  dialog is rendered where no one can see or click it, and enumerates that desktop
+  to report the window class, title and control text. The test's own positive
+  control runs the same erroring script WITHOUT the switch and requires a dialog;
+  without it, "no window" would be indistinguishable from a watcher that cannot
+  see windows -- which is precisely the bug that control once caught (a poll loop
+  comparing `WaitForSingleObject`'s result against `STILL_ACTIVE`/259 instead of
+  `WAIT_TIMEOUT`/258 never ran, and six cases passed while looking at nothing).
 
 ## Do not execute a binary to find out which build it is
 
@@ -86,7 +119,16 @@ An automated run would then sit behind that window until a timeout kills it.
 
 Identity is therefore checked **statically**, by scanning the file for the wide
 literal `/NonInteractive` that every `/AI` build contains and stock does not
-(`AhkAi.psm1`'s `Test-AhkPatchedBuild`, and the equivalent in `AhkSetup.cs`).
+(`AhkAi.psm1`'s `Test-AhkPatchedBuild`).
+
+The same trap has a milder, more confusing cousin: an argument-rewriting shell can
+delete the switch from a command that looks correct.  Git Bash / MSYS2 path
+conversion turns `/AI` into `C:\Program Files\Git\AI`, the interpreter then reads
+it as the script path, and the run is back to stock behaviour -- with `/AI`
+apparently present in what you typed.  Recognise it by the combination *exit 2,
+empty stderr, and an error box whose text ends in `\Git\AI`*.  Invoke the
+interpreter from PowerShell or `cmd`, or set `MSYS_NO_PATHCONV=1` for that one
+call.  `csc`'s `/nologo` is eaten the same way; that one is spelled `-nologo`.
 
 ## Running a script safely
 
@@ -128,6 +170,19 @@ Get-Process -Name 'AutoHotkey*' -EA SilentlyContinue |
     Where-Object { $_.Path -like '*ahk-patch*' } |
     Stop-Process -Force
 ```
+
+The suite should not need that. A test harness that starts an interpreter owns
+the duty to finish it, and "we called `TerminateProcess` on the way out" only
+covers an orderly exit: when the run is killed from outside, no cleanup code
+executes at all. Three such orphans once sat on a private desktop for twenty
+minutes with `dist\AutoHotkey64.exe` locked, so the next build could not copy
+over it — invisible to everyone, and self-reproducing in any long CI queue. The
+fix is a kernel guarantee rather than a code path: `DesktopProbe` claims its
+child with a job object flagged `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, so closing
+the job — including by process death — reaps it. `tools\test-no-dialog.ps1`
+holds the watcher to that standard directly: it kills the probe mid-run with a
+child alive and asserts nothing survives, which is also the case that fails on
+the pre-job-object probe.
 
 ## Exit codes
 
@@ -184,9 +239,47 @@ what the others do prevents confusion.
 | `OnError(callback)` | runtime errors, if the callback returns 1 | can only be registered after the script has loaded, so it cannot catch load-time errors |
 | `try` / `catch` | errors you expect | must actually cover the failing path |
 | `/Debug` + DBGp | breakpoints, call stacks, variables | needs a DBGp client on the other end |
+| `OutputDebug(Text)` | free-form tracing, no dialog, no exit-code change | stock sends it to a debugger or DebugView only; here it also reaches stderr |
 
 If you are writing a script whose *purpose* is to run unattended, prefer
 `/AI` plus a non-zero exit code over string-matching stderr.
+
+## Tracing with `OutputDebug()`
+
+`/AI` reports what went wrong. `OutputDebug()` is for what did not go wrong but
+is worth seeing: which branch ran, what a value was, how far the script got
+before it hung.
+
+```ahk
+OutputDebug("entering Sync-Registry")
+regValue := RegRead("HKCU\Some\Key")        ; the risky call
+OutputDebug("got: " regValue)
+```
+
+On this build each call writes to **stderr** as well as to whichever channel
+stock used, so a caller in a terminal sees the trace:
+
+```
+entering Sync-Registry
+got: 1
+```
+
+- stdout keeps carrying only what the script prints with
+  `FileAppend(..., "*")`, so the two can be read as separate streams.
+- The trace does not need `/AI`, but `/AI` is what guarantees the process owns a
+  console when launched from one (`AutoHotkey.exe` is a GUI-subsystem binary;
+  outside `/AI` the first `OutputDebug()` call attaches to the parent console,
+  which fails harmlessly when there is none).
+- With a DBGp debugger attached (`/Debug`) the debugger still receives the text
+  exactly as before; the mirror is in addition to it, not instead of it.
+- Redirected stderr is UTF-8, so non-ASCII traces survive a pipe. Read it as
+  UTF-8 rather than trusting a GBK console's rendering.
+- Because a trace is not an error, it never changes the exit code.
+
+`tools/test-outputdebug.ps1` asserts all of the above against both
+architectures, against a real console (no pipe anywhere), and against a stock
+binary as the negative control. `samples/2-outputdebug.ahk` is the same thing on
+a command line you can type.
 
 ## Debugging a script you cannot see
 
