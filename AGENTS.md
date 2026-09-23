@@ -60,6 +60,7 @@ pwsh -NoProfile -File tools/pack-release.ps1          # 两个架构都构建完
   且拿不到退出码就当 timeout 判 FAIL。
   附带：模块函数名用未批准动词（`Build-*`）会让 5.1 在 `Import-Module` 时刷一屏 GBK 乱码警告，故改名 `New-*`。
   判据不是「能解析」而是**两个引擎各跑一遍全部套件**（`tools/*.ps1` 只写 `pwsh` 的机器看不见这些）。
+  CI 的 verify 作业末尾有一步用 `powershell.exe` 重跑 noninteractive + parity，专门守这条。
 - 子模块保持 **dirty（已打补丁）是预期状态**，不是待提交的改动。
 - 上游 bump 后先跑 `-CheckOnly`；CI 的 `patch-check` 作业会挡住失效的补丁。
 - **`export-patches.ps1` 必须用 `git diff --output=`**（不能重定向 stdout）：PowerShell 会

@@ -292,3 +292,25 @@ jobs:
           pwsh -NoProfile -File tools/test-no-dialog.ps1 `
             -Exe dist/AutoHotkey64.exe,dist32/AutoHotkey32.exe `
             -Pristine pristine-dist/AutoHotkey64.exe
+
+      # Every step above runs pwsh 7, and every tools/*.ps1 declares
+      # #requires -Version 5.1 -- a claim nothing was checking.  A machine with
+      # only Windows PowerShell is the common case for an agent host, and the two
+      # harness defects that surfaced there were of the silent kind:
+      # ProcessStartInfo.ArgumentList is null on .NET Framework (so the runner
+      # never started), and Start-Process -PassThru reports an EMPTY ExitCode
+      # there, which made test-parity compare null to null and pass "exits
+      # non-zero" on nothing.  Re-running these two suites under powershell.exe is
+      # what turns the 5.1 claim into a guard; the dialog-free private-desktop
+      # suites are deliberately not repeated, since they are slower and their
+      # subject is window state rather than the harness.
+      - name: Assert the harness also runs on Windows PowerShell 5.1
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass `
+            -File tools/test-noninteractive.ps1 -Exe dist/AutoHotkey64.exe
+          powershell -NoProfile -ExecutionPolicy Bypass `
+            -File tools/test-parity.ps1 `
+              -Patched dist/AutoHotkey64.exe `
+              -Pristine pristine-dist/AutoHotkey64.exe `
+              -PristineSource pristine-test
