@@ -50,13 +50,16 @@ foreach ($d in @($SourceDir) + $(if ($PristineSource) { @(Join-Path $PristineSou
     if (-not (Test-Path -LiteralPath $d)) { throw "source tree not found: $d" }
 }
 
-# Dialog calls this file deliberately does NOT gate, each with why.  An entry that
-# stops matching any site is reported below, so the list cannot rot silently.
+# Dialog calls this file deliberately does NOT gate, each with why.  Count is the
+# number of ungated sites that excuse covers, asserted exactly: matching by file
+# alone would also excuse the NEXT dialog someone adds to that file, which is the
+# one case this guard exists for.  An entry whose sites disappear is reported too,
+# so neither direction of drift can rot silently.
 $Exceptions = @(
-    @{ File = 'window.cpp'; Why = 'the MsgBox() helper itself; gating it would change the built-in MsgBox() function' }
-    @{ File = 'window.h'; Why = 'declarations of that helper' }
-    @{ File = 'InputBox.cpp'; Why = 'the built-in InputBox() prompt: a window the script asked for, not a diagnostic' }
-    @{ File = 'script2.cpp'; Why = 'the built-in MsgBox()/InputBox() implementations, and tray/GUI menu commands that need a window to exist at all' }
+    @{ File = 'window.cpp'; Count = 4; Why = 'the MsgBox() helper itself; gating it would change the built-in MsgBox() function' }
+    @{ File = 'window.h'; Count = 2; Why = 'declarations of that helper' }
+    @{ File = 'InputBox.cpp'; Count = 1; Why = 'the built-in InputBox() prompt: a window the script asked for, not a diagnostic' }
+    @{ File = 'script2.cpp'; Count = 5; Why = 'the built-in MsgBox() implementation, and diagnostics raised from LaunchAutoHotkeyUtil/HandleMenuItem (Help, Window Spy, Edit, Reload) -- they run only when a menu is clicked, and an unattended /AI run has no tray menu to click' }
 )
 
 function Get-CodePart {
@@ -142,11 +145,16 @@ function Test-Tree {
 
     $bad = @()
     $exc = 0
+    $ungatedByFile = @{}
     foreach ($s in $sites) {
         $listed = @($Exceptions | Where-Object { $_.File -eq $s.Name }).Count -gt 0
         if ($ExpectGated) {
-            if (-not $s.Gated -and -not $listed) { $bad += $s }
-            elseif (-not $s.Gated -and $listed) { $exc++ }
+            if (-not $s.Gated) {
+                if ($listed) {
+                    $exc++
+                    $ungatedByFile[$s.Name] = 1 + [int]$ungatedByFile[$s.Name]
+                } else { $bad += $s }
+            }
         }
         else {
             # Pristine control: the same scan must find work for the patch to do.
@@ -158,6 +166,15 @@ function Test-Tree {
     Write-Host ("      {0} dialog call site(s), {1} ungated, {2} covered by an exception entry" -f $sites.Count, $ungated, $exc)
 
     if ($ExpectGated) {
+        # An excuse is scoped to the exact number of sites it was written for.
+        foreach ($x in $Exceptions) {
+            $actual = [int]$ungatedByFile[$x.File]
+            if ($actual -ne [int]$x.Count) {
+                Write-Host ("      !! {0}: exception entry allows {1} ungated site(s), scan finds {2}" -f `
+                    $x.File, [int]$x.Count, $actual) -ForegroundColor Red
+                $bad += [pscustomobject]@{ Name = $x.File; Line = 0; Text = 'exception count drift' }
+            }
+        }
         $seen = @($sites | ForEach-Object { $_.Name } | Select-Object -Unique)
         foreach ($x in $Exceptions) {
             if ($seen -notcontains $x.File) {
