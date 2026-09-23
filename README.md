@@ -311,7 +311,11 @@ If a patch no longer applies, rebase it against the new base and re-export:
 
 ```powershell
 git -C upstream apply --reject patches/0004-error.cpp.patch   # resolve .rej
-git -C upstream diff -- source/error.cpp > patches/0004-error.cpp.patch
+# `--output=`, never `>`: PowerShell decodes git's stdout with the console code
+# page, so a UTF-8 BOM arrives as GBK mojibake and the patch looks fine while
+# its bytes are broken.  Unlike `git archive -o`, this path resolves against the
+# shell's cwd, so there is no `../`.
+git -C upstream diff --output=patches/0004-error.cpp.patch -- source/error.cpp
 # or, for every file at once:
 pwsh -NoProfile -File tools/export-patches.ps1
 ```

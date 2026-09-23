@@ -44,7 +44,7 @@ $Exe = $subjects[0]
 $Exe = (Resolve-Path $Exe).Path
 if (-not (Test-Path $Exe)) { throw "interpreter not found: $Exe" }
 
-$probe = Build-ConsoleProbe -RepoRoot $RepoRoot
+$probe = New-ConsoleProbe -RepoRoot $RepoRoot
 
 # --- the script under test --------------------------------------------------
 # Two lines: the first is loadable, the second is an unassigned-variable error,

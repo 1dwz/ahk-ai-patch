@@ -75,7 +75,14 @@ function Invoke-AhkAi {
     # Only $null is dropped.  An empty string is a legitimate argv entry (a blank
     # script parameter is observable via A_Args), so filtering it would quietly
     # change what the interpreter is asked to do.
-    foreach ($a in $argv) { $psi.ArgumentList.Add($a) }
+    #
+    # ProcessStartInfo.ArgumentList is .NET Core only and Windows PowerShell 5.1
+    # runs on .NET Framework, so argv is quoted into one string here.  Backslashes
+    # matter only where they would escape a quote: double the run before each "
+    # and the trailing run, so neither eats a quote.
+    $psi.Arguments = ($argv | ForEach-Object {
+        '"' + ($_ -replace '(\\*)"', '$1$1\"' -replace '(\\+)$', '$1$1') + '"'
+    }) -join ' '
     $psi.RedirectStandardOutput = $true
     $psi.RedirectStandardError  = $true
     $psi.RedirectStandardInput  = $true
@@ -96,7 +103,14 @@ function Invoke-AhkAi {
         # Give the async reads a moment to drain after exit.
         try { $proc.WaitForExit() } catch {}
     } else {
-        try { $proc.Kill($true) } catch {}
+        # Kill(bool) is .NET Core only.  Swallowing the MissingMethodException on
+        # .NET Framework would leave the timed-out interpreter running, which is
+        # how a watched process came to hold a build output locked; ask which
+        # overload exists instead of guessing from the exception.
+        try {
+            if ([System.Diagnostics.Process].GetMethod('Kill', [type[]]@([bool]))) { $proc.Kill($true) }
+            else { $proc.Kill() }
+        } catch {}
     }
     $sw.Stop()
 
@@ -160,7 +174,7 @@ function Test-AhkPatchedBuild {
 Compile tools/ConsoleProbe.cs, which is how a test observes output that has no
 pipe in front of it.  Returns the path to the probe.
 #>
-function Build-ConsoleProbe {
+function New-ConsoleProbe {
     [CmdletBinding()]
     param(
         [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
@@ -244,7 +258,7 @@ function Invoke-AhkInConsole {
 Compile tools/DesktopProbe.cs, which is how a test sees a modal dialog without
 one ever reaching the user's screen.  Returns the path to the probe.
 #>
-function Build-DesktopProbe {
+function New-DesktopProbe {
     [CmdletBinding()]
     param(
         [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
@@ -260,7 +274,7 @@ function Build-DesktopProbe {
     ) | Where-Object { Test-Path $_ } | Select-Object -First 1
     if (-not $csc) { throw 'csc.exe not found; cannot build the desktop probe' }
 
-    # Always recompiled, for the same reason as Build-ConsoleProbe.
+    # Always recompiled, for the same reason as New-ConsoleProbe.
     Remove-Item $OutFile -Force -ErrorAction SilentlyContinue
     & $csc /nologo "/out:$OutFile" $src | Out-Null
     if (-not (Test-Path -LiteralPath $OutFile)) { throw 'failed to compile the desktop probe' }
@@ -353,5 +367,5 @@ function Invoke-AhkDialogWatch {
     }
 }
 
-Export-ModuleMember -Function Invoke-AhkAi, Test-AhkPatchedBuild, Build-ConsoleProbe, Invoke-AhkInConsole, `
-    Build-DesktopProbe, Invoke-AhkDialogWatch
+Export-ModuleMember -Function Invoke-AhkAi, Test-AhkPatchedBuild, New-ConsoleProbe, Invoke-AhkInConsole, `
+    New-DesktopProbe, Invoke-AhkDialogWatch

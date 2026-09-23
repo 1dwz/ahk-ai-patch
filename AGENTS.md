@@ -47,11 +47,19 @@ pwsh -NoProfile -File tools/pack-release.ps1          # 两个架构都构建完
 
 - 补丁与脚本一律 **LF**（`.gitattributes` 强制；CRLF 会让 `git apply` 在上下文行上失败）。
 - **`tools/*.ps1` 必须能在 Windows PowerShell 5.1 下跑**（脚本头部就写着 `#requires -Version 5.1`，
-  而一台装好 Agent 的机器常常只有 `powershell` 没有 `pwsh`）。两个 5.1 陷阱：
+  而一台装好 Agent 的机器常常只有 `powershell` 没有 `pwsh`）。四个 5.1 陷阱：
   **① `[CmdletBinding()]` 脚本的 `param()` 默认值里取不到脚本目录**——`$PSScriptRoot` 此时为空、
   `$MyInvocation.MyCommand.Path` 为 null，`Split-Path` 当场报错，脚本一行都没执行（body 里两者都正常）。
   所以 repo-root 一律声明成 `= ''`，在 `)` 之后 `if (-not $RepoRoot) { $RepoRoot = Split-Path -Parent $PSScriptRoot }`。
   **② 三元 `? :` 是 7.0+ 语法**，5.1 里连解析都过不了（`exit ($ok ? 0 : 1)` → `exit $(if ($ok) { 0 } else { 1 })`）。
+  **③ .NET Core 才有的 API**：`ProcessStartInfo.ArgumentList`（5.1 里是 null →「不能对 Null 值表达式调用方法」）、
+  `Process.Kill($true)`（被 `try/catch` 吞掉就是**超时进程没杀**，锁住 `dist\*.exe`）。
+  argv 只能在 `$psi.Arguments` 里自己按 CreateProcess 规则加引号，杀掉超时进程要先 `GetMethod('Kill',[bool])` 探一下。
+  **④ `Start-Process -PassThru` 在 5.1 拿不到 `ExitCode`（空字符串）**，于是 `-ne 2` 全错、
+  而 `-ne 0` 因为 `$null -eq 0` 为假而**空过**。跑解释器一律走 `Invoke-AhkAi`（`[Diagnostics.Process]`），
+  且拿不到退出码就当 timeout 判 FAIL。
+  附带：模块函数名用未批准动词（`Build-*`）会让 5.1 在 `Import-Module` 时刷一屏 GBK 乱码警告，故改名 `New-*`。
+  判据不是「能解析」而是**两个引擎各跑一遍全部套件**（`tools/*.ps1` 只写 `pwsh` 的机器看不见这些）。
 - 子模块保持 **dirty（已打补丁）是预期状态**，不是待提交的改动。
 - 上游 bump 后先跑 `-CheckOnly`；CI 的 `patch-check` 作业会挡住失效的补丁。
 - **`export-patches.ps1` 必须用 `git diff --output=`**（不能重定向 stdout）：PowerShell 会

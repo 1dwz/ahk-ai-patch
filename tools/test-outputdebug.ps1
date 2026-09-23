@@ -65,7 +65,7 @@ New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 $enc = New-Object System.Text.UTF8Encoding($false)
 
 # Compiled once and shared by every console case below.
-$probe = Build-ConsoleProbe -RepoRoot $RepoRoot
+$probe = New-ConsoleProbe -RepoRoot $RepoRoot
 
 function New-Script([string]$name, [string]$body) {
     $p = Join-Path $tmp "$name.ahk"

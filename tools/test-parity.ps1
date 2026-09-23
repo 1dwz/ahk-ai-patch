@@ -54,6 +54,7 @@ param(
 if (-not $RepoRoot) { $RepoRoot = Split-Path -Parent $PSScriptRoot }
 
 $ErrorActionPreference = 'Stop'
+Import-Module (Join-Path $PSScriptRoot 'AhkAi.psm1') -Force
 
 $Patched  = (Resolve-Path $Patched).Path
 $Pristine = (Resolve-Path $Pristine).Path
@@ -71,25 +72,27 @@ function Fail([string]$n, [string]$d) {
 function Note([string]$n, [string]$d) { $script:notes++; Write-Host ("  ....  {0}  {1}" -f $n, $d) -ForegroundColor DarkGray }
 
 function Run-Interpreter([string]$exe, [string[]]$arguments, [int]$timeoutMs = 15000) {
-    $outFile = [System.IO.Path]::GetTempFileName()
-    $errFile = [System.IO.Path]::GetTempFileName()
-    try {
-        $p = Start-Process -FilePath $exe -ArgumentList $arguments -NoNewWindow -PassThru `
-                           -RedirectStandardOutput $outFile -RedirectStandardError $errFile
-        if (-not $p.WaitForExit($timeoutMs)) {
-            try { $p.Kill() } catch { }
-            try { $p.WaitForExit(3000) } catch { }
-            return [pscustomobject]@{ Exit = $null; TimedOut = $true; Out = ''; Err = '' }
-        }
-        $p.WaitForExit()   # let the async stream readers drain
+    # This used to be Start-Process -PassThru, whose Process object reports an EMPTY
+    # ExitCode under Windows PowerShell 5.1 (it works on 7).  Every case then failed
+    # on `exit=` while the `exits non-zero` assertion passed vacuously, because
+    # $null -eq 0 is false.  Invoke-AhkAi reads the code off a real .NET process and
+    # behaves the same on both engines -- and its dialog guard is satisfied here by
+    # construction, since every call site below passes /ErrorStdOut or /AI.  Keep it
+    # that way: this suite runs the STOCK binary, where a missing switch means a
+    # modal dialog on the user's screen.
+    $r = Invoke-AhkAi -Exe $exe -Arguments $arguments -TimeoutMs $timeoutMs
+    if ($r.Blocked -or $null -eq $r.ExitCode) {
+        # An unreadable exit code is its own condition, not a value: `$null -eq 0`
+        # is false in PowerShell, so an "exits non-zero" assertion would otherwise
+        # pass on nothing at all -- which is what 5.1's empty ExitCode used to do.
         return [pscustomobject]@{
-            Exit = $p.ExitCode; TimedOut = $false
-            Out = [System.IO.File]::ReadAllText($outFile)
-            Err = [System.IO.File]::ReadAllText($errFile)
+            Exit = $null; TimedOut = $r.Blocked; NoExitCode = ($null -eq $r.ExitCode)
+            Out = ''; Err = ''
         }
     }
-    finally {
-        Remove-Item $outFile, $errFile -Force -ErrorAction SilentlyContinue
+    [pscustomobject]@{
+        Exit = $r.ExitCode; TimedOut = $false; NoExitCode = $false
+        Out = $r.StdOut; Err = $r.StdErr
     }
 }
 
@@ -160,8 +163,8 @@ try {
         $pa = Run-Interpreter $Patched  $argv
         $pr = Run-Interpreter $Pristine $argv
 
-        if ($pa.TimedOut -or $pr.TimedOut) {
-            Fail $c.n "TIMED OUT (patched=$($pa.TimedOut) pristine=$($pr.TimedOut)) -- a hang is never equality"
+        if ($pa.TimedOut -or $pr.TimedOut -or $pa.NoExitCode -or $pr.NoExitCode) {
+            Fail $c.n "NO USABLE RESULT (patched: timed-out=$($pa.TimedOut) no-exit-code=$($pa.NoExitCode); pristine: timed-out=$($pr.TimedOut) no-exit-code=$($pr.NoExitCode)) -- a hang, or an exit code that could not be read, is never equality"
             continue
         }
         if ($pa.Exit -ne $c.exit) {
@@ -211,7 +214,7 @@ try {
         @{ n='#Warn diagnostic'; s=$warnScript }
     )) {
         $pa = Run-Interpreter $Patched @('/AI', $c.s)
-        Note $c.n ("patched /AI: exit=$($pa.Exit)  $(Show (Normalize $pa.Err $work))")
+        Note $c.n ("patched /AI: exit=$(if ($null -eq $pa.Exit) { '<unreadable>' } else { $pa.Exit })  $(Show (Normalize $pa.Err $work))")
     }
 
     Write-Output ''
@@ -226,8 +229,8 @@ try {
     $odbScript = Script 'odb.ahk' "#Requires AutoHotkey v2.0`nFileAppend(`"OUT``n`", `"*`")`nOutputDebug(`"DBG``nSECOND`")`nFileAppend(`"AFTER``n`", `"*`")`n"
     $paO  = Run-Interpreter $Patched  ($sharedArgs + @($odbScript))
     $prO  = Run-Interpreter $Pristine ($sharedArgs + @($odbScript))
-    if ($paO.TimedOut -or $prO.TimedOut) {
-        Fail 'OutputDebug mirror' "TIMED OUT (patched=$($paO.TimedOut) pristine=$($prO.TimedOut))"
+    if ($paO.TimedOut -or $prO.TimedOut -or $paO.NoExitCode -or $prO.NoExitCode) {
+        Fail 'OutputDebug mirror' "NO USABLE RESULT (patched: timed-out=$($paO.TimedOut) no-exit-code=$($paO.NoExitCode); pristine: timed-out=$($prO.TimedOut) no-exit-code=$($prO.NoExitCode))"
     } else {
         $pOutO = Normalize $paO.Out $work
         $prOutO = Normalize $prO.Out $work
@@ -293,6 +296,7 @@ try {
     $aiProbe = Script 'ai-probe.ahk' "#Requires AutoHotkey v2.0`nx := NoSuchFuncAnywhere(1)`n"
     $ai = Run-Interpreter $Patched @('/AI', $aiProbe)
     if ($ai.TimedOut) { Fail 'patched /AI' 'timed out' }
+    elseif ($ai.NoExitCode) { Fail 'patched /AI' 'its exit code could not be read -- "non-zero" must not be inferred from silence' }
     elseif ($ai.Exit -eq 0) { Fail 'patched /AI' 'a script with an unhandled error exited 0' }
     elseif (-not $ai.Err.Trim()) { Fail 'patched /AI' 'nothing written to stderr' }
     else { Pass "/AI reports the error on stderr and exits non-zero (exit $($ai.Exit))" }

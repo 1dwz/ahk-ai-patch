@@ -58,7 +58,7 @@ if (-not $Exe.Count) {
 if (-not $Exe.Count) { throw 'No interpreter found. Pass -Exe <path>.' }
 foreach ($e in $Exe) { if (-not (Test-Path -LiteralPath $e)) { throw "not found: $e" } }
 
-$probe = Build-DesktopProbe -RepoRoot $RepoRoot
+$probe = New-DesktopProbe -RepoRoot $RepoRoot
 
 $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ('ahk-nodialog-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
