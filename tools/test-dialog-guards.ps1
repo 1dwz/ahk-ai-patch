@@ -12,8 +12,8 @@ layout without the key, a game holding the hook, a debugger client to refuse).
 Reproducing them is out of reach; regressing them is not, so the guarantee is
 pinned to the source text instead.
 
-The rule it applies: a call to MsgBox(), MessageBox() or DialogBoxParam() is
-accounted for when
+The rule it applies: a call to MsgBox(), MessageBox(), MessageBoxIndirect() or
+DialogBoxParam() is accounted for when
   * mNonInteractive appears within the 24 lines above it (a statement-level gate), or
   * it sits in a function whose own opening does test mNonInteractive before the
     call (Script::ShowError returns early, so its dialog is unreachable under /AI), or
@@ -21,6 +21,12 @@ accounted for when
 
 Anything else FAILs -- including a dialog a future upstream bump introduces, which
 is the case that cannot be reviewed by hand in time.
+
+Those names are the whole API surface, not a guess: searching upstream for
+TaskDialog*, CreateDialog* and MessageBoxIndirect leaves exactly one hit the scan
+does not cover, GuiType::CreateTabDialog in script_gui.cpp, which creates a
+WS_CHILD dialog inside a Gui the script itself asked for -- outside /AI's boundary
+(the switch suppresses what the interpreter reports, never what the script draws).
 
 The pristine tree is run through the same rule and MUST report ungated sites:
 without that, this check would pass on an unpatched interpreter too, which is how a
