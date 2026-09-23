@@ -46,6 +46,12 @@ pwsh -NoProfile -File tools/pack-release.ps1          # 两个架构都构建完
 ## 关键约定
 
 - 补丁与脚本一律 **LF**（`.gitattributes` 强制；CRLF 会让 `git apply` 在上下文行上失败）。
+- **`tools/*.ps1` 必须能在 Windows PowerShell 5.1 下跑**（脚本头部就写着 `#requires -Version 5.1`，
+  而一台装好 Agent 的机器常常只有 `powershell` 没有 `pwsh`）。两个 5.1 陷阱：
+  **① `[CmdletBinding()]` 脚本的 `param()` 默认值里取不到脚本目录**——`$PSScriptRoot` 此时为空、
+  `$MyInvocation.MyCommand.Path` 为 null，`Split-Path` 当场报错，脚本一行都没执行（body 里两者都正常）。
+  所以 repo-root 一律声明成 `= ''`，在 `)` 之后 `if (-not $RepoRoot) { $RepoRoot = Split-Path -Parent $PSScriptRoot }`。
+  **② 三元 `? :` 是 7.0+ 语法**，5.1 里连解析都过不了（`exit ($ok ? 0 : 1)` → `exit $(if ($ok) { 0 } else { 1 })`）。
 - 子模块保持 **dirty（已打补丁）是预期状态**，不是待提交的改动。
 - 上游 bump 后先跑 `-CheckOnly`；CI 的 `patch-check` 作业会挡住失效的补丁。
 - **`export-patches.ps1` 必须用 `git diff --output=`**（不能重定向 stdout）：PowerShell 会
@@ -91,6 +97,13 @@ pwsh -NoProfile -File tools/pack-release.ps1          # 两个架构都构建完
   回归在字节测试下全绿、对无人值守却是致命的。看窗口的办法是 `DesktopProbe.cs`：用
   `STARTUPINFO.lpDesktop` 把子进程放到**当前 window station 的私有桌面**，对话框渲染在那里
   （用户看不见、也点不到），探针进程 `SetThreadDesktop` 后枚举窗口并报告 class/title/控件文本。
+- **需要「第二个实例」的站点必须让探针会跑双子进程**：`#SingleInstance Prompt` 的判据是
+  `FindWindow(WINDOW_CLASS_MAIN, ...)`，单个进程永远碰不上，而 `/AI` 自己**不建主窗口**，
+  所以先起的那个实例**不能**带开关（否则第二个实例根本没有可提示的冲突，用例会靠空桌面假通过）。
+  `DesktopProbe.exe <capture> <exe> <argv> --then <exe> <argv>` 就是这个模式：先等第一个实例
+  **真的拥有窗口**（就绪计数不能带可见性过滤，AHK 的主窗口是隐藏的），再只看被观察 pid 的窗口，
+  并把它的 stderr 单独落到 `<capture>.stderr`。用例同时断言 `prior_ready`/`captured`，
+  于是“没 setup 成功”不可能被读成“没弹框”。
 - **`WaitForSingleObject` 返回 `WAIT_TIMEOUT`(258)，不是 `STILL_ACTIVE`(259)**（后者是退出码）。
   两者混用会让轮询循环变成死代码——桌面探针移植时踩过一次，结果是 6 个 `/AI` 用例
   **全部空断言假通过**；抓出它的是「无开关的同一脚本必须看到对话框」这条正向对照。
