@@ -230,6 +230,11 @@ architecture in turn; repeating the switch is not valid for an array parameter,
 and `-File` does not split `a,b` into two arguments the way `-Command` does, so
 the tests normalise it themselves.
 
+`pwsh` is not required: every script under `tools/` also runs on Windows
+PowerShell 5.1 (`powershell -NoProfile -File ...`), which is what an agent host
+with only the built-in shell has. CI re-runs two of these suites under
+`powershell.exe` so that claim stays true.
+
 Requires VS 2022 Build Tools with the "Desktop development with C++" workload;
 `tools/build.ps1` locates it via `vswhere` and sources `vcvarsall.bat` itself.
 Output lands in `upstream/bin/AutoHotkey64.exe`; `-OutDir` copies the exe to
