@@ -286,10 +286,17 @@ function Invoke-AhkDialogWatch {
         [Parameter(Mandatory)][string]$Exe,
         [Parameter(Mandatory)][string[]]$Arguments,
         [Parameter(Mandatory)][string]$Probe,
+        # A first instance to launch before the watched one, on the same private
+        # desktop -- what #SingleInstance needs before it has anything to prompt
+        # about.  The watcher below is the child whose windows count.
+        [string[]]$PriorArguments = @(),
+        [string]$PriorExe,
         [switch]$AllowDialogRisk
     )
 
     $argv = @($Arguments | Where-Object { $_ -ne $null })
+    $prior = @($PriorArguments | Where-Object { $_ -ne $null })
+    if ($prior.Count -and -not $PriorExe) { $PriorExe = $Exe }
     $safe = $false
     foreach ($a in $argv) {
         if ($a -imatch '^/(AI|NonInteractive|ErrorStdOut)($|=)') { $safe = $true; break }
@@ -303,9 +310,19 @@ function Invoke-AhkDialogWatch {
     if (-not (Test-Path -LiteralPath $Probe)) { throw "desktop probe not found: $Probe" }
     $capture = Join-Path ([System.IO.Path]::GetTempPath()) ('ahk-dialog-capture-{0}.txt' -f [guid]::NewGuid().ToString('N'))
     try {
-        & $Probe $capture $Exe @argv
+        if ($prior.Count) {
+            & $Probe $capture $PriorExe @prior '--then' $Exe @argv
+        } else {
+            & $Probe $capture $Exe @argv
+        }
         $code = $LASTEXITCODE
         $text = if (Test-Path -LiteralPath $capture) { [System.IO.File]::ReadAllText($capture) } else { '' }
+        # The probe closes its capture handle before it exits, so this file is
+        # complete by now; it only exists in the two-child mode.
+        $stderrPath = "$capture.stderr"
+        $childStdErr = if (Test-Path -LiteralPath $stderrPath) {
+            [System.IO.File]::ReadAllText($stderrPath, [System.Text.Encoding]::UTF8)
+        } else { '' }
 
         # The capture's own words are the verdict.  The probe's exit code cannot be
         # the authority, because the child's exit code travels through it and a
@@ -313,7 +330,7 @@ function Invoke-AhkDialogWatch {
         $dialog = ($text -match '(?m)^DIALOGS:')
         $seenMarker = ($dialog -or $text -match '(?m)^NO DIALOG SEEN$')
         $childExit = $code
-        if ($text -match 'exit=(\d+)') { $childExit = [int]$Matches[1] }
+        if ($text -match ' exit=(\d+)') { $childExit = [int]$Matches[1] }
 
         [pscustomobject]@{
             Dialog     = $dialog
@@ -322,10 +339,17 @@ function Invoke-AhkDialogWatch {
             Watched    = $seenMarker
             ExitCode   = $childExit
             Detail     = $text
+            # Two-child mode: did the prior instance actually register a window, and
+            # did the watched child's stderr reach the file.  Both false would make a
+            # case pass without the situation it claims to set up ever occurring.
+            PriorReady = ($text -match 'prior_ready=True')
+            Captured   = ($text -match 'captured=True')
+            StdErr     = $childStdErr
         }
     }
     finally {
         Remove-Item $capture -Force -ErrorAction SilentlyContinue
+        Remove-Item "$capture.stderr" -Force -ErrorAction SilentlyContinue
     }
 }
 

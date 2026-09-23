@@ -109,6 +109,17 @@ Two consequences worth remembering:
   see windows -- which is precisely the bug that control once caught (a poll loop
   comparing `WaitForSingleObject`'s result against `STILL_ACTIVE`/259 instead of
   `WAIT_TIMEOUT`/258 never ran, and six cases passed while looking at nothing).
+- One interpreter dialog cannot be reproduced by a single process: `#SingleInstance
+  Prompt` only asks once another instance of the same script already owns the main
+  window the check looks for. `DesktopProbe` therefore accepts a second child
+  (`<capture> <exe> <argv> --then <exe> <argv>`): it starts the prior instance,
+  waits until that one really owns a window on the private desktop, then watches
+  the second with its own pid as the scope and its stderr captured to a file.
+  `test-no-dialog.ps1` asserts the prior instance's readiness and the capture as
+  part of the case, because a `#SingleInstance` test whose first instance never
+  registered would pass by watching an empty desktop. Run with the switch it exits
+  silently with the reason on stderr; run without it the `#32770` prompt appears
+  and the case is named by its button text.
 
 ## Do not execute a binary to find out which build it is
 

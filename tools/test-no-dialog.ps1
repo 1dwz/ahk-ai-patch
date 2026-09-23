@@ -32,7 +32,7 @@ Usage:
 #>
 [CmdletBinding()]
 param(
-    [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$RepoRoot = '',
     [string[]]$Exe = @(),
     # A stock interpreter built from the same pin.  Optional, but when present it
     # turns this file from "the patch looks fine" into "the patch is doing the
@@ -41,6 +41,7 @@ param(
     [string]$Pristine,
     [int]$TimeoutMs = 20000
 )
+if (-not $RepoRoot) { $RepoRoot = Split-Path -Parent $PSScriptRoot }
 
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AhkAi.psm1') -Force
@@ -80,6 +81,14 @@ $ok   = New-Case 'ok'      "#NoTrayIcon`nFileAppend(`"ok`", `"*`")`nExitApp 0"
 # polling window before giving up -- which is what makes it killable mid-run.
 $persist = New-Case 'persist' "#NoTrayIcon`nLoop`n    Sleep 200"
 $miss = Join-Path $tmp 'definitely-not-here.ahk'
+# A second instance of a #SingleInstance script is the one diagnostic upstream
+# resolves by asking the user, so it cannot be exercised by a single process: the
+# probe runs two children on one private desktop (see --then in DesktopProbe.cs).
+# The PRIOR instance is deliberately given no switch -- /AI suppresses the main
+# window, and CheckPriorInstance decides by FindWindow on that window, so a
+# switched first instance would leave the second with nothing to prompt about and
+# the case would pass for the wrong reason.
+$si = New-Case 'single' "#Requires AutoHotkey v2.0`n#NoTrayIcon`n#SingleInstance Prompt`nLoop`n    Sleep 200"
 
 $cases = [ordered]@{
     'dialog-control'  = @{ A = @($run);               Dialog = $true;  Exit = $null }
@@ -89,6 +98,13 @@ $cases = [ordered]@{
     'missing-script'  = @{ A = @('/AI', $miss);       Dialog = $false; Exit = 2 }
     'warning'         = @{ A = @('/AI', $warn);       Dialog = $false; Exit = 0 }
     'clean-exit'      = @{ A = @('/AI', $ok);         Dialog = $false; Exit = 0 }
+    'single-instance' = @{ A = @('/AI', $si); Prior = @($si); Dialog = $false; Exit = 0;
+                           Note = 'Another instance of this script is already running' }
+    # The same two children with no switch on the second one: the prompt must
+    # appear.  Names the dialog text, not just "some window", so it cannot be
+    # satisfied by a stray window of the prior instance.
+    'si-dialog'       = @{ A = @($si); Prior = @($si); Dialog = $true; Exit = $null;
+                           Want = 'older instance of this script is already running' }
 }
 
 $fail = 0
@@ -109,7 +125,8 @@ foreach ($target in $Exe) {
 
     foreach ($k in $cases.Keys) {
         $c = $cases[$k]
-        $r = Invoke-AhkDialogWatch -Probe $probe -Exe $target -Arguments $c.A -AllowDialogRisk
+        $r = Invoke-AhkDialogWatch -Probe $probe -Exe $target -Arguments $c.A `
+             -PriorArguments $c.Prior -AllowDialogRisk
 
         $problems = @()
         if (-not $r.Watched) {
@@ -127,6 +144,24 @@ foreach ($target in $Exe) {
             }
             if ($null -ne $c.Exit -and -not $r.Dialog) {
                 if ($r.ExitCode -ne $c.Exit) { $problems += "expected exit $($c.Exit), got $($r.ExitCode)" }
+            }
+        }
+        # Two-child cases are worthless unless the collision they describe really
+        # happened: a prior instance that never won a window leaves the watched
+        # child nothing to notice, and "no dialog" then means nothing.
+        if ($c.Prior -and $r.Watched) {
+            if (-not $r.PriorReady) { $problems += 'the prior instance never registered a window, so there was no second-instance situation to test' }
+            if (-not $r.Captured)   { $problems += "the watched child's stderr was not captured, so its diagnostic cannot be read: $(($r.Detail -split "`r?`n")[0])" }
+        }
+        if ($c.Note -and $r.Watched) {
+            if ($r.StdErr -notmatch [regex]::Escape($c.Note)) {
+                $problems += "expected the diagnostic on stderr: $($c.Note)"
+                foreach ($line in ($r.StdErr -split "`r?`n")) { if ($line.Trim()) { $problems += "  | $line" } }
+            }
+        }
+        if ($c.Want -and $r.Dialog) {
+            if ($r.Detail -notmatch [regex]::Escape($c.Want)) {
+                $problems += "a window appeared, but not the one this case is about: $($c.Want)"
             }
         }
 

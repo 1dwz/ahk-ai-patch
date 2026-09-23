@@ -155,7 +155,8 @@ dialog it cannot dismiss.
 │   │                                gated by mNonInteractive (sites no runtime
 │   │                                test can reach on a given machine)
 │   ├── test-no-dialog.ps1           /AI raises NO window (watched on a private
-│   │                                desktop; a stock build must raise one)
+│   │                                desktop; a stock build must raise one; runs
+│   │                                two instances for #SingleInstance)
 │   ├── test-noninteractive.ps1      /AI contract (redirected; bytes only)
 │   ├── test-outputdebug.ps1         OutputDebug() reaches the console, per arch
 │   └── test-parity.ps1              behaviour matches stock, plus the audited

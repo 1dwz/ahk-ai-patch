@@ -67,7 +67,11 @@ windows, and proves the watcher can see one by running the same argv against a
 build that has no `/AI`.
 
 In `/AI` mode the interpreter also skips the main window, the tray icon and the
-`WH_MSGFILTER` hook, and treats `#SingleInstance Prompt` as *ignore*. Anything
+`WH_MSGFILTER` hook, and treats `#SingleInstance Prompt` as *ignore*: a second
+instance of the same script writes one warning to stderr and exits `0` rather than
+opening the "Replace it with this instance?" box (stock behaviour, and a run that
+never returns). Note the consequence when reading an exit code — `0` here can mean
+"another instance already owns this script", which the stderr line names. Anything
 that needs a GUI (tray menu, `ListLines`, Edit) is not available in this mode.
 
 ## Print debug output an agent can see

@@ -2,6 +2,7 @@
 // putting one on the user's screen.
 //
 // Usage: DesktopProbe.exe <capture-file> <exe> <argv...>
+//        DesktopProbe.exe <capture-file> <exe> <argv...> --then <exe> <argv...>
 //
 // The child is started on a private desktop of the current window station
 // (STARTUPINFO.lpDesktop), so any error box AutoHotkey raises is rendered where
@@ -10,6 +11,16 @@
 // kills the child.  Enumerating a desktop the calling thread is not attached to
 // returns nothing, so SetThreadDesktop is called first; the work runs on a
 // thread that creates no windows of its own, which is what makes that call legal.
+//
+// --then starts a SECOND child on the same desktop, once the first one owns a
+// window.  Some dialogs need two processes: #SingleInstance only prompts when
+// FindWindow() finds a prior instance, and window enumeration -- like
+// FindWindow -- is scoped to one desktop, so both instances have to be launched
+// by the same watcher.  In that mode the watched child is the second one (the
+// dialog watch is scoped to its pid), and its stdout/stderr are captured to
+// <capture-file>.stderr so a caller can also assert what it printed.  Both
+// children share one stream file: which stream a message used is asserted by
+// tools/test-outputdebug.ps1 and test-noninteractive.ps1, not here.
 //
 // The child is also claimed by a job object with KILL_ON_JOB_CLOSE, so it cannot
 // outlive this probe even when the probe is killed outright and none of the
@@ -66,6 +77,18 @@ class DesktopProbe
     [DllImport("kernel32.dll", SetLastError = true)] static extern bool TerminateProcess(IntPtr h, uint code);
     [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
 
+    [StructLayout(LayoutKind.Sequential)]
+    struct SECURITY_ATTRIBUTES
+    {
+        public int nLength; public IntPtr lpSecurityDescriptor; public bool bInheritHandle;
+    }
+
+    // Only the second child of --then needs its streams captured, and a handle the
+    // child may inherit has to be created inheritable on purpose.
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    static extern IntPtr CreateFileW(string name, int access, int share, ref SECURITY_ATTRIBUTES sa,
+        int disposition, int flags, IntPtr template);
+
     // A job object with KILL_ON_JOB_CLOSE, so the watched child cannot outlive this
     // process.  TerminateProcess below only runs when the probe exits in an orderly
     // way; when an automated run hits its timeout and kills the probe outright, no
@@ -111,8 +134,13 @@ class DesktopProbe
     const uint WAIT_TIMEOUT = 258;   // what the wait actually returns while the child runs
     const int POLL_INTERVAL_MS = 25;
     const int MAX_POLLS = 320;       // ~8 s of watching before giving up
+    const int READY_POLLS = 160;     // ~4 s for the first --then child to own a window
     const int JobObjectExtendedLimitInformation = 9;
     const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x2000;
+    const int STARTF_USESTDHANDLES = 0x0100;
+    const int GENERIC_WRITE = 0x40000000;
+    const int FILE_SHARE_READ_WRITE = 3;
+    const int CREATE_ALWAYS = 2;
 
     // Present on every desktop a process first touches, unrelated to the script.
     static bool IsNoise(string className)
@@ -122,6 +150,17 @@ class DesktopProbe
 
     static uint targetPid;
     static List<string> found = new List<string>();
+    static int windowCount;
+
+    // Readiness check for the --then mode: AHK's main window is created hidden, so
+    // "the prior instance is up" cannot be judged by visibility -- the dialog watch
+    // below does filter on it, this one must not.
+    static bool CountTop(IntPtr h, IntPtr l)
+    {
+        uint pid; GetWindowThreadProcessId(h, out pid);
+        if (pid == targetPid && !IsNoise(Class(h))) windowCount++;
+        return true;
+    }
 
     static string Text(IntPtr h)
     {
@@ -162,45 +201,112 @@ class DesktopProbe
         Environment.Exit(code);
     }
 
-    static void Run()
+    static string cap;   // so a helper can fail through the same capture path
+
+    static void Bail(string body, int code) { Write(cap, body, code); }
+
+    static PROCESS_INFORMATION StartChild(string[] a, int from, int to, IntPtr job, IntPtr stream, out bool claimed)
     {
-        string[] a = Environment.GetCommandLineArgs();
-        if (a.Length < 3) Write(a.Length > 1 ? a[1] : "", "usage: DesktopProbe.exe <capture-file> <exe> <argv...>\n", 98);
-        string capture = a[1], exe = a[2];
-
-        var cl = new StringBuilder();
-        cl.Append('"').Append(exe).Append('"');
-        for (int i = 3; i < a.Length; i++) cl.Append(" \"").Append(a[i]).Append('"'); // paths may contain spaces
-
-        IntPtr desk = CreateDesktopW("ahk-probe-desktop", IntPtr.Zero, IntPtr.Zero, 0, DESKTOP_ALL_ACCESS, IntPtr.Zero);
-        if (desk == IntPtr.Zero)
-            Write(capture, "CreateDesktop failed, win32 error " + Marshal.GetLastWin32Error() + "\n", 97);
-
         var si = new STARTUPINFO();
         si.cb = Marshal.SizeOf(si);
         si.lpDesktop = "winsta0\\ahk-probe-desktop";
-
-        PROCESS_INFORMATION pi;
-        if (!CreateProcessW(null, cl.ToString(), IntPtr.Zero, IntPtr.Zero, false, 0, IntPtr.Zero, null, ref si, out pi))
+        if (stream != IntPtr.Zero)
         {
-            int e = Marshal.GetLastWin32Error();
-            CloseDesktop(desk);
-            Write(capture, "CreateProcess failed, win32 error " + e + "\ncmdline: " + cl + "\n", 96);
+            si.dwFlags = STARTF_USESTDHANDLES;
+            si.hStdInput = stream;   // never read; a valid handle keeps the trio consistent
+            si.hStdOutput = stream;
+            si.hStdError = stream;
         }
 
-        targetPid = (uint)pi.dwProcessId;
+        var cl = new StringBuilder();
+        cl.Append('"').Append(a[from]).Append('"');
+        for (int i = from + 1; i < to; i++) cl.Append(" \"").Append(a[i]).Append('"'); // paths may contain spaces
 
-        // Claim the child for a kill-on-close job before anything else can happen,
-        // so that no matter how this process dies the interpreter dies with it.
+        PROCESS_INFORMATION pi;
+        if (!CreateProcessW(null, cl.ToString(), IntPtr.Zero, IntPtr.Zero, stream != IntPtr.Zero,
+                0, IntPtr.Zero, null, ref si, out pi))
+            Bail("CreateProcess failed, win32 error " + Marshal.GetLastWin32Error() + "\ncmdline: " + cl + "\n", 96);
+
+        claimed = job != IntPtr.Zero && AssignProcessToJobObject(job, pi.hProcess);
+        return pi;
+    }
+
+    static bool Alive(IntPtr h)
+    {
+        uint c;
+        return GetExitCodeProcess(h, out c) && c == STILL_ACTIVE;
+    }
+
+    static void Run()
+    {
+        string[] a = Environment.GetCommandLineArgs();
+        if (a.Length < 3)
+            Write(a.Length > 1 ? a[1] : "", "usage: DesktopProbe.exe <capture-file> <exe> <argv...> [--then <exe> <argv...>]\n", 98);
+        cap = a[1];
+
+        int split = -1;
+        for (int i = 3; i < a.Length; i++) if (a[i] == "--then") { split = i; break; }
+        if (split == 3 || split >= a.Length - 1)
+            Bail("usage error: --then needs '<exe> <argv...>' on both sides\n", 98);
+        bool hasPrior = split > 0;
+
+        IntPtr desk = CreateDesktopW("ahk-probe-desktop", IntPtr.Zero, IntPtr.Zero, 0, DESKTOP_ALL_ACCESS, IntPtr.Zero);
+        if (desk == IntPtr.Zero)
+            Bail("CreateDesktop failed, win32 error " + Marshal.GetLastWin32Error() + "\n", 97);
+
+        // One job for every child, created up front, so no child can exist outside it.
         IntPtr job = CreateJobObjectW(IntPtr.Zero, null);
-        bool jobGuarded = false;
+        bool jobLimits = false;
         if (job != IntPtr.Zero)
         {
             JOBOBJECT_EXTENDED_LIMIT_INFORMATION lim = new JOBOBJECT_EXTENDED_LIMIT_INFORMATION();
             lim.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-            if (SetInformationJobObject(job, JobObjectExtendedLimitInformation, ref lim, Marshal.SizeOf(lim)))
-                jobGuarded = AssignProcessToJobObject(job, pi.hProcess);
+            jobLimits = SetInformationJobObject(job, JobObjectExtendedLimitInformation, ref lim, Marshal.SizeOf(lim));
         }
+
+        bool priorClaimed = true, watchClaimed;
+        PROCESS_INFORMATION prior = new PROCESS_INFORMATION();
+        bool priorReady = false;
+        if (hasPrior)
+        {
+            prior = StartChild(a, 2, split, job, IntPtr.Zero, out priorClaimed);
+            // Wait until the prior instance owns a window.  #SingleInstance only
+            // prompts when FindWindow() can see a prior main window, and that window
+            // is created hidden -- so this counts windows without the visibility
+            // filter the dialog watch below uses.  Skipping the wait would let a test
+            // watch a second instance that never had any reason to prompt, which
+            // passes for the wrong reason.
+            SetThreadDesktop(desk);
+            targetPid = (uint)prior.dwProcessId;
+            for (int rp = 0; ; ++rp)
+            {
+                windowCount = 0;
+                EnumWindows(CountTop, IntPtr.Zero);
+                if (windowCount > 0 || rp >= READY_POLLS || !Alive(prior.hProcess)) break;
+                WaitForSingleObject(prior.hProcess, POLL_INTERVAL_MS);
+            }
+            priorReady = windowCount > 0;
+        }
+
+        // In the two-child mode the watched child's streams go to a file, so a caller
+        // can assert what /AI printed as well as what it did not print in a window.
+        string stderrPath = cap + ".stderr";
+        bool captured = false;
+        IntPtr stream = IntPtr.Zero;
+        if (hasPrior)
+        {
+            SECURITY_ATTRIBUTES sa = new SECURITY_ATTRIBUTES();
+            sa.nLength = Marshal.SizeOf(sa);
+            sa.bInheritHandle = true;
+            IntPtr h = CreateFileW(stderrPath, GENERIC_WRITE, FILE_SHARE_READ_WRITE, ref sa, CREATE_ALWAYS, 0, IntPtr.Zero);
+            if (h != new IntPtr(-1)) { stream = h; captured = true; }
+        }
+
+        PROCESS_INFORMATION pi = hasPrior
+            ? StartChild(a, split + 1, a.Length, job, stream, out watchClaimed)
+            : StartChild(a, 2, a.Length, job, IntPtr.Zero, out watchClaimed);
+        bool jobGuarded = jobLimits && priorClaimed && watchClaimed;
+        targetPid = (uint)pi.dwProcessId;
 
         // WaitForSingleObject answers WAIT_TIMEOUT while the child runs; STILL_ACTIVE
         // (259) is an EXIT CODE, not a wait result, and comparing the two makes the
@@ -229,15 +335,22 @@ class DesktopProbe
             TerminateProcess(pi.hProcess, 1);
             code = stillRunning && !dialogSeen ? 0 : code;
         }
+        if (hasPrior && Alive(prior.hProcess)) TerminateProcess(prior.hProcess, 0);
+        if (stream != IntPtr.Zero) CloseHandle(stream);  // before a caller reads the file
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
-        CloseHandle(job);
+        if (hasPrior) { CloseHandle(prior.hThread); CloseHandle(prior.hProcess); }
+        CloseHandle(job);   // reaps anything left, including on an abnormal exit above
         CloseDesktop(desk);
 
         var o = new StringBuilder();
         o.Append("pid=").Append(targetPid).Append(" polls=").Append(polls)
          .Append(" exit=").Append(code).Append(" killed=").Append(dialogSeen || stillRunning)
-         .Append(" job=").Append(jobGuarded).Append('\n');
+         .Append(" job=").Append(jobGuarded);
+        if (hasPrior)
+            o.Append(" prior=").Append(prior.dwProcessId).Append(" prior_ready=").Append(priorReady)
+             .Append(" captured=").Append(captured);
+        o.Append('\n');
         if (dialogSeen)
         {
             o.Append("DIALOGS:\n");
@@ -247,7 +360,7 @@ class DesktopProbe
 
         // The exit code is a convenience only: a script may legitimately ExitApp with
         // any number, so the capture text above is what a caller must read.
-        Write(capture, o.ToString(), dialogSeen ? 3 : (int)code);
+        Write(cap, o.ToString(), dialogSeen ? 3 : (int)code);
     }
 
     static int Main(string[] args)
