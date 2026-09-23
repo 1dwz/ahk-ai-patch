@@ -10,10 +10,12 @@ Usage:
 #>
 [CmdletBinding()]
 param(
-    [string]$ForkRepo = (Join-Path (Split-Path -Parent $PSScriptRoot) 'upstream'),
-    [string]$OutDir   = (Join-Path (Split-Path -Parent $PSScriptRoot) 'patches'),
+    [string]$ForkRepo = '',
+    [string]$OutDir   = '',
     [string]$Suffix   = ''
 )
+if (-not $ForkRepo) { $ForkRepo = Join-Path (Split-Path -Parent $PSScriptRoot) 'upstream' }
+if (-not $OutDir) { $OutDir = Join-Path (Split-Path -Parent $PSScriptRoot) 'patches' }
 
 $ErrorActionPreference = 'Stop'
 

@@ -12,7 +12,7 @@ Usage:
 #>
 [CmdletBinding()]
 param(
-    [string]$RepoRoot      = (Split-Path -Parent $PSScriptRoot),
+    [string]$RepoRoot      = '',
     [string]$UpstreamDir,
     [ValidateSet('Release','Debug','Self-contained','Release(mbcs)','Debug(mbcs)','Self-contained(mbcs)')]
     [string]$Configuration = 'Release',
@@ -20,6 +20,7 @@ param(
     [string]$Platform      = 'x64',
     [string]$OutDir
 )
+if (-not $RepoRoot) { $RepoRoot = Split-Path -Parent $PSScriptRoot }
 
 $ErrorActionPreference = 'Stop'
 

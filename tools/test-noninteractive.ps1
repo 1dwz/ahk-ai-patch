@@ -25,10 +25,11 @@ Usage:
 #>
 [CmdletBinding()]
 param(
-    [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$RepoRoot = '',
     [string]$Exe,
     [int]$TimeoutMs = 15000
 )
+if (-not $RepoRoot) { $RepoRoot = Split-Path -Parent $PSScriptRoot }
 
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AhkAi.psm1') -Force

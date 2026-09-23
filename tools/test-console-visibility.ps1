@@ -22,8 +22,9 @@ Exit code 0 when the diagnostic appears on a bare console, 1 otherwise.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$Exe,
-    [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot)
+    [string]$RepoRoot = ''
 )
+if (-not $RepoRoot) { $RepoRoot = Split-Path -Parent $PSScriptRoot }
 
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AhkAi.psm1') -Force
@@ -97,7 +98,7 @@ try {
     }
 
     if ($ok) { Write-Output 'OK: /AI diagnostics are visible on an unredirected console' }
-    exit ($ok ? 0 : 1)
+    exit $(if ($ok) { 0 } else { 1 })
 }
 finally {
     Remove-Item $probe -Force -ErrorAction SilentlyContinue

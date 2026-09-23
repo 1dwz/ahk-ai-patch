@@ -35,6 +35,7 @@ download/
 
 # Agent private workspace
 .pi/memory/
+.pi/tmp/
 
 # Stock binaries kept for revert (large, machine-specific)
 backup-stock/

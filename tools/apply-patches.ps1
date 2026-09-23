@@ -15,12 +15,13 @@ Usage:
 #>
 [CmdletBinding()]
 param(
-    [string]$RepoRoot  = (Split-Path -Parent $PSScriptRoot),
+    [string]$RepoRoot  = '',
     [string]$UpstreamDir,
     [string]$PatchDir,
     [switch]$Reset,
     [switch]$CheckOnly
 )
+if (-not $RepoRoot) { $RepoRoot = Split-Path -Parent $PSScriptRoot }
 
 $ErrorActionPreference = 'Stop'
 

@@ -32,10 +32,11 @@ Usage:
 #>
 [CmdletBinding()]
 param(
-    [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$RepoRoot = '',
     [string]$SourceDir = '',
     [string]$PristineSource = ''
 )
+if (-not $RepoRoot) { $RepoRoot = Split-Path -Parent $PSScriptRoot }
 
 $ErrorActionPreference = 'Stop'
 if (-not $SourceDir) { $SourceDir = Join-Path $RepoRoot 'upstream\source' }

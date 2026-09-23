@@ -14,12 +14,13 @@ Usage:
 #>
 [CmdletBinding()]
 param(
-    [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$RepoRoot = '',
     [string]$RunId,
     [string]$Artifact = 'AutoHotkey64-x64-Release',
     [string]$OutDir,
     [switch]$Test
 )
+if (-not $RepoRoot) { $RepoRoot = Split-Path -Parent $PSScriptRoot }
 
 $ErrorActionPreference = 'Stop'
 Set-Location $RepoRoot

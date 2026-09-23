@@ -32,7 +32,7 @@ Usage:
 #>
 [CmdletBinding()]
 param(
-    [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$RepoRoot = '',
     [string]$Repo     = '1dwz/ahk-ai-patch',
 
     # Which CI run to assemble from.  Supply exactly one of -RunId / -Ref.
@@ -48,6 +48,7 @@ param(
     [string]$Title = 'AutoHotkey v2 + /AI',
     [string]$NotesFile
 )
+if (-not $RepoRoot) { $RepoRoot = Split-Path -Parent $PSScriptRoot }
 
 $ErrorActionPreference = 'Stop'
 

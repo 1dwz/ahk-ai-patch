@@ -46,11 +46,12 @@ Usage:
 param(
     [Parameter(Mandatory)][string]$Patched,
     [Parameter(Mandatory)][string]$Pristine,
-    [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$RepoRoot = '',
     # Unpatched source tree, used to prove stock does NOT know the new switches.
     # Optional: skipped with a note when absent.
     [string]$PristineSource
 )
+if (-not $RepoRoot) { $RepoRoot = Split-Path -Parent $PSScriptRoot }
 
 $ErrorActionPreference = 'Stop'
 
