@@ -309,8 +309,8 @@ pwsh -NoProfile -File tools/apply-patches.ps1 -CheckOnly  # surfaces conflicts
 If a patch no longer applies, rebase it against the new base and re-export:
 
 ```powershell
-git -C upstream apply --reject patches/0002-error.cpp.patch   # resolve .rej
-git -C upstream diff -- source/error.cpp > patches/0002-error.cpp.patch
+git -C upstream apply --reject patches/0004-error.cpp.patch   # resolve .rej
+git -C upstream diff -- source/error.cpp > patches/0004-error.cpp.patch
 # or, for every file at once:
 pwsh -NoProfile -File tools/export-patches.ps1
 ```
